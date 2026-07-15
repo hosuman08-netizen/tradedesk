@@ -1,30 +1,30 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradeForge • 무역 플랫폼</title>
-  <meta name="description" content="무역 관련 앱. 아이디어/상품 거래. p6 Voice 협상. p10 Stable 결제. Legion p13. Fictional only.">
+  <title>TradeForge — Fictional Trade Simulation</title>
+  <meta name="description" content="TradeForge — a fictional trade simulation. Post deals, negotiate by voice, and trade with in-app tokens. Entertainment only. Not real trading or investment.">
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
   <div class="container">
     <header>
-      <div class="disclaimer">FICTIONAL TRADE SIMULATION ONLY • 18+ • NO REAL GOODS OR MONEY • p13 × p6 Voice × p10 Credits</div>
+      <div class="disclaimer">⚠️ FICTIONAL TRADE SIMULATION • 18+ • FOR ENTERTAINMENT ONLY • NO REAL GOODS, MONEY, OR INVESTMENT — nothing here is financial advice</div>
       <h1>TradeForge</h1>
-      <p class="tagline">Submit. Negotiate by Voice. Trade. (Fictional)</p>
-      
+      <p class="tagline">Post a deal. Pitch by voice. Trade. (Simulation)</p>
+
       <div class="wallet">
         <button onclick="connectWallet()">🔗 Connect</button>
-        <div id="wallet-info">0x... • 1,250 $EROS / 450 Credits</div>
+        <div id="wallet-info">Not connected • 1,250 TFC / 450 Credits</div>
       </div>
-      
+
       <div class="nav">
         <button data-view="feed" onclick="showFeed()">🔥 Hot Deals</button>
         <button data-view="post" onclick="showPost()">📝 Post Trade</button>
         <button data-view="voice" onclick="showVoice()">🎙️ Voice Negotiate</button>
-        <button data-view="codex" onclick="showCodex()">📓 Codex</button>
+        <button data-view="journal" onclick="showJournal()">📓 Journal</button>
       </div>
     </header>
 
@@ -35,7 +35,7 @@
         <label>Trade Title</label>
         <input id="trade-title" placeholder="Bulk Coffee Beans from Colombia">
         
-        <label>Voice Description (p6 Lung Surprise Eye - boosts trust)</label>
+        <label>Voice Pitch (optional — records a pitch score for your listing)</label>
         <button onclick="recordVoiceTrade()">🎙 Record Voice</button>
         <div id="voice-preview"></div>
         
@@ -47,11 +47,11 @@
           <input id="trade-price" type="number" min="1" value="5000">
           <select id="trade-currency">
             <option value="Credits">Credits</option>
-            <option value="$EROS">$EROS</option>
+            <option value="TFC">TFC</option>
           </select>
         </div>
-        
-        <button onclick="postTrade()" class="primary">Post Trade (FOMO: limited visibility)</button>
+
+        <button onclick="postTrade()" class="primary">Post Trade — live for 24h</button>
       </div>
     </div>
 
@@ -63,22 +63,22 @@
 
     <!-- Voice Negotiate -->
     <div id="voice" class="section hidden">
-      <h2>Voice Negotiate (p6 Live)</h2>
-      <p class="tagline" style="font-size:12px;margin-bottom:8px">Pick a live deal, pitch by voice. A more surprising pitch earns a bigger real discount (max 15%, once per deal).</p>
+      <h2>Voice Negotiate</h2>
+      <p class="tagline" style="font-size:12px;margin-bottom:8px">Pick a live deal and pitch by voice. A stronger pitch earns a bigger discount (max 15%, once per deal).</p>
       <label class="form" style="display:block;font-size:10px;color:var(--dim);margin-bottom:2px">Deal to negotiate</label>
       <select id="negotiate-target" class="price-row" style="width:100%;background:#1a1712;border:1px solid #3a2f22;color:var(--text);padding:7px;border-radius:5px;margin-bottom:8px"></select>
       <button onclick="startVoiceNegotiation()">🎙 Start Voice Negotiation</button>
       <div id="negotiation-result"></div>
     </div>
 
-    <!-- Codex -->
-    <div id="codex" class="section hidden">
-      <h2>📓 Trade Codex (ALWAYS LEARNING)</h2>
-      <div id="codex-list"></div>
+    <!-- Journal -->
+    <div id="journal" class="section hidden">
+      <h2>📓 Trade Journal</h2>
+      <div id="journal-list"></div>
     </div>
   </div>
 
-  <script src="./lung-surprise-eye.js"></script>
+  <script src="./voice-pitch.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-/* p13 TradeForge - SENSE + Da Vinci: golden, restraint, one protagonist, 8px */
+/* TradeForge — restrained gold, one protagonist per screen, 8px grid */
 :root {
   --bg:#0a0806; --gold:#c5a46e; --card:#12100d; --text:#f5f1e6; --dim:#8b6f47; --grid:8px;
 }
