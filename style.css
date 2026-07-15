@@ -1,0 +1,26 @@
+/* p13 TradeForge - SENSE + Da Vinci: golden, restraint, one protagonist, 8px */
+:root {
+  --bg:#0a0806; --gold:#c5a46e; --card:#12100d; --text:#f5f1e6; --dim:#8b6f47; --grid:8px;
+}
+body { background:var(--bg); color:var(--text); font-family:system-ui,-apple-system,sans-serif; margin:0; padding:0; line-height:1.58; }
+.container { max-width:618px; margin:0 auto; padding:calc(var(--grid)*2); }
+header { text-align:center; margin-bottom:calc(var(--grid)*2); }
+h1 { font-size:26px; color:var(--gold); letter-spacing:-0.7px; } /* protagonist */
+.tagline { color:var(--dim); }
+.disclaimer { font-size:8.5px; opacity:0.55; }
+.wallet { display:flex; gap:var(--grid); justify-content:center; margin:10px 0; }
+#wallet-info { font-family:monospace; font-size:10px; background:var(--card); padding:3px 7px; border-radius:4px; }
+.nav { display:flex; gap:5px; justify-content:center; margin-bottom:calc(var(--grid)*1.5); flex-wrap:wrap; }
+button { background:#15120f; color:var(--gold); border:1px solid #3a2f22; padding:7px 11px; border-radius:5px; cursor:pointer; font-size:12px; }
+button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
+.section { margin-bottom:calc(var(--grid)*2.5); }
+.hidden { display:none; }
+.form label { display:block; font-size:10px; color:var(--dim); margin:calc(var(--grid)*0.75) 0 2px; }
+.form input, .form textarea { width:100%; background:#1a1712; border:1px solid #3a2f22; color:var(--text); padding:7px; border-radius:5px; margin-bottom:6px; box-sizing:border-box; }
+.form textarea { height:74px; }
+.grid { display:grid; gap:8px; }
+.trade-card { background:var(--card); border:1px solid #3a2f22; padding:10px; border-radius:7px; }
+.trade-card .surprise { color:#c5a46e; font-size:10px; }
+.trade-card button { margin-top:6px; width:100%; }
+.fomo { color:#c5a46e; font-size:10px; }
+.notebook-entry { background:var(--card); border:1px solid #3a2f22; padding:8px; border-radius:5px; margin-bottom:6px; font-size:12px; }

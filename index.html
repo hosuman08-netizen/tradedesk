@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TradeForge • 무역 플랫폼</title>
+  <meta name="description" content="무역 관련 앱. 아이디어/상품 거래. p6 Voice 협상. p10 Stable 결제. Legion p13. Fictional only.">
+  <link rel="stylesheet" href="style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="disclaimer">FICTIONAL TRADE SIMULATION ONLY • 18+ • NO REAL GOODS OR MONEY • p13 × p6 Voice × p10 Credits</div>
+      <h1>TradeForge</h1>
+      <p class="tagline">Submit. Negotiate by Voice. Trade. (Fictional)</p>
+      
+      <div class="wallet">
+        <button onclick="connectWallet()">🔗 Connect</button>
+        <div id="wallet-info">0x... • 1,250 $EROS / 450 Credits</div>
+      </div>
+      
+      <div class="nav">
+        <button onclick="showPost()">📝 Post Trade</button>
+        <button onclick="showFeed()">🔥 Hot Deals (FOMO)</button>
+        <button onclick="showVoice()">🎙️ Voice Negotiate (p6)</button>
+        <button onclick="showCodex()">📓 Codex</button>
+      </div>
+    </header>
+
+    <!-- Post Trade -->
+    <div id="post" class="section">
+      <h2>Post New Trade Offer/Request</h2>
+      <div class="form">
+        <label>Trade Title</label>
+        <input id="trade-title" placeholder="Bulk Coffee Beans from Colombia">
+        
+        <label>Voice Description (p6 Lung Surprise Eye - boosts trust)</label>
+        <button onclick="recordVoiceTrade()">🎙 Record Voice</button>
+        <div id="voice-preview"></div>
+        
+        <label>Details</label>
+        <textarea id="trade-desc" placeholder="Quantity, specs, delivery terms..."></textarea>
+        
+        <label>Price / Terms (in Credits or $EROS)</label>
+        <input id="trade-price" type="number" value="5000">
+        
+        <button onclick="postTrade()" class="primary">Post Trade (FOMO: limited visibility)</button>
+      </div>
+    </div>
+
+    <!-- Feed -->
+    <div id="feed" class="section hidden">
+      <h2>Hot Trade Deals <span id="fomo-header" class="fomo">🔥 —</span></h2>
+      <div id="trade-list" class="grid"></div>
+    </div>
+
+    <!-- Voice Negotiate -->
+    <div id="voice" class="section hidden">
+      <h2>Voice Negotiate (p6 Live)</h2>
+      <div id="negotiation"></div>
+      <button onclick="startVoiceNegotiation()">🎙 Start Voice Negotiation</button>
+      <div id="negotiation-result"></div>
+    </div>
+
+    <!-- Codex -->
+    <div id="codex" class="section hidden">
+      <h2>📓 Trade Codex (ALWAYS LEARNING)</h2>
+      <div id="codex-list"></div>
+    </div>
+  </div>
+
+  <script src="./lung-surprise-eye.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
+EOF

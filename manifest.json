@@ -1,0 +1,9 @@
+{
+  "name": "TradeForge",
+  "short_name": "TradeForge",
+  "description": "무역 플랫폼 앱. Voice 협상, Stable 결제. Fictional. p13 Legion.",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#0a0806",
+  "theme_color": "#c5a46e"
+}
