@@ -21,6 +21,9 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .form label { display:block; font-size:10px; color:var(--dim); margin:calc(var(--grid)*0.75) 0 2px; }
 .form input, .form textarea { width:100%; background:#1a1712; border:1px solid #3a2f22; color:var(--text); padding:7px; border-radius:5px; margin-bottom:6px; box-sizing:border-box; }
 .form textarea { height:74px; }
+.price-row { display:flex; gap:6px; }
+.price-row input { flex:1; margin-bottom:6px; }
+.price-row select { background:#1a1712; border:1px solid #3a2f22; color:var(--text); padding:7px; border-radius:5px; margin-bottom:6px; }
 .grid { display:grid; gap:8px; }
 .trade-card { background:var(--card); border:1px solid #3a2f22; padding:16px; border-radius:8px; }
 .trade-card.expired { opacity:0.5; }

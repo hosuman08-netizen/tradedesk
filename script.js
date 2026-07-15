@@ -1,13 +1,26 @@
 // p13 TradeForge - Trade app. p6 Voice + p10 Credits + FOMO.
 let wallet = null;
-let balance = 1250;
-let credits = 450;
+// Balances are the source of truth for every order. Persisted so the ledger
+// stays accurate across reloads (was inert/reset before → balance desync bug).
+let balance = loadNum('p13_balance', 1250);   // $EROS
+let credits = loadNum('p13_credits', 450);    // Credits
 let trades = JSON.parse(localStorage.getItem('p13_trades') || '[]');
 let codex = JSON.parse(localStorage.getItem('p13_codex') || '[]');
 
+function loadNum(key, fallback) {
+  const v = parseFloat(localStorage.getItem(key));
+  return Number.isFinite(v) ? v : fallback;
+}
+
+// Single writer for balances → never drift between memory and storage.
+function saveBalances() {
+  localStorage.setItem('p13_balance', String(balance));
+  localStorage.setItem('p13_credits', String(credits));
+}
+
 function updateWallet() {
   const el = document.getElementById('wallet-info');
-  if (el) el.innerHTML = `${wallet || '0xDemo'} • ${balance} $EROS / ${credits} Credits`;
+  if (el) el.innerHTML = `${wallet || '0xDemo'} • ${balance.toLocaleString()} $EROS / ${credits.toLocaleString()} Credits`;
 }
 
 function connectWallet() {
@@ -45,19 +58,23 @@ function recordVoiceTrade() {
 function postTrade() {
   const title = document.getElementById('trade-title').value || 'Untitled Trade';
   const desc = document.getElementById('trade-desc').value || 'No details.';
-  const price = parseInt(document.getElementById('trade-price').value) || 1000;
+  const price = Math.max(1, parseInt(document.getElementById('trade-price').value) || 1000);
+  const curEl = document.getElementById('trade-currency');
+  const currency = curEl && curEl.value === '$EROS' ? '$EROS' : 'Credits';
   const surprise = window._p13Voice ? window._p13Voice.surprise : 0.3;
-  
+
   if (!wallet) {
     alert('Connect wallet (p10 credits).');
     return;
   }
-  
+
   const trade = {
     id: Date.now(),
     title,
     desc,
     price,
+    currency,
+    seller: wallet,          // so a poster can't accept their own deal
     surprise,
     voiceUrl: window._p13Voice ? window._p13Voice.url : null,
     timestamp: new Date().toISOString(),
@@ -102,16 +119,22 @@ function showFeed() {
   
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   trades.forEach(trade => {
+    const closed = trade.status !== 'open';
     const leftSec = trade.expiry ? Math.max(0, Math.floor((trade.expiry - Date.now())/1000)) : 0;
-    const expired = leftSec <= 0;
+    const expired = !closed && leftSec <= 0;
     const mins = Math.floor(leftSec / 60);
-    const fomo = expired ? 'expired'
+    const fomo = closed ? '✓ closed'
+      : expired ? 'expired'
       : mins >= 60 ? `⏱ ${Math.floor(mins/60)}h ${mins%60}m left`
       : `⏱ ${mins}m left`;
-    const fomoClass = (!expired && mins < 60) ? 'urgent' : '';
+    const fomoClass = (!closed && !expired && mins < 60) ? 'urgent' : '';
+    const inactive = closed || expired;
+    const currency = trade.currency || 'Credits';
     const desc = trade.desc.length > 80 ? esc(trade.desc.slice(0,80)).trimEnd() + '…' : esc(trade.desc);
+    // Button label reflects real state: open→Accept, closed→Deal Closed, expired→Expired.
+    const label = closed ? 'Deal Closed' : expired ? 'Expired' : 'Accept Deal';
     const el = document.createElement('div');
-    el.className = 'trade-card' + (expired ? ' expired' : '');
+    el.className = 'trade-card' + (inactive ? ' expired' : '');
     el.innerHTML = `
       <div class="tc-head">
         <strong class="tc-title">${esc(trade.title)}</strong>
@@ -119,43 +142,60 @@ function showFeed() {
       </div>
       <p class="tc-desc">${desc}</p>
       <div class="tc-meta">
-        <span class="tc-price">${trade.price.toLocaleString()} <em>Credits</em></span>
+        <span class="tc-price">${trade.price.toLocaleString()} <em>${esc(currency)}</em></span>
         <span class="surprise">👁 ${trade.surprise.toFixed(2)}${trade.voiceUrl ? ' 🎙' : ''}</span>
       </div>
-      <button class="primary" onclick="acceptTrade(${trade.id})"${expired ? ' disabled' : ''}>${expired ? 'Expired' : 'Accept Deal'}</button>
+      <button class="primary" onclick="acceptTrade(${trade.id})"${inactive ? ' disabled' : ''}>${label}</button>
       <button class="ghost" onclick="birthTradeArtifact(${trade.id})">Birth Artifact → p17/p10</button>
     `;
     list.appendChild(el);
   });
 }
 
+// Real order settlement: validate → deduct the exact currency → close the deal.
+// Every branch returns before mutating so balances can never drift on a failed order.
 function acceptTrade(id) {
   const trade = trades.find(t => t.id === id);
-  if (!trade || !wallet) {
-    alert('Connect wallet.');
-    return;
-  }
-  
+  if (!trade) return;
+  if (!wallet) { alert('Connect wallet first.'); return; }
+
+  // Deal is one-shot: once closed it stays closed (was re-acceptable → double-spend).
+  if (trade.status !== 'open') { alert('This deal is already closed.'); return; }
+  if (trade.expiry && trade.expiry <= Date.now()) { alert('This deal has expired.'); return; }
+  if (trade.seller && trade.seller === wallet) { alert("You can't accept your own trade."); return; }
+
   const cost = trade.price;
-  if (credits < cost) {
-    if (!payWithP10Cross(Math.min(cost, 300), 'p13-trade')) {
-      alert('Need more p10 Credits. Bridge from p10.');
+  const currency = trade.currency || 'Credits';
+  const isEros = currency === '$EROS';
+  const have = isEros ? balance : credits;
+
+  // Insufficient funds → optional p10 bridge (Credits only). No silent overspend.
+  if (have < cost) {
+    const short = cost - have;
+    if (isEros) {
+      alert(`Need ${short.toLocaleString()} more $EROS. Balance unchanged.`);
       return;
     }
-  } else {
-    credits -= cost;
+    if (!confirm(`Short ${short.toLocaleString()} Credits. Bridge from p10 Stable?`)) return;
+    if (!bridgeCreditsFromP10(short)) return;   // tops up exactly the shortfall, or aborts
+    if (credits < cost) { alert('Bridge fell short. Order cancelled, balances unchanged.'); return; }
   }
-  
+
+  // Settle: atomic single deduction, persisted immediately.
+  if (isEros) balance -= cost; else credits -= cost;
+  saveBalances();
+
   trade.status = 'accepted';
-  trade.buyers.push(wallet);
+  trade.closedAt = Date.now();
+  trade.buyer = wallet;
+  if (!trade.buyers.includes(wallet)) trade.buyers.push(wallet);
   localStorage.setItem('p13_trades', JSON.stringify(trades));
-  
-  const note = `Accepted ${trade.title} for ${cost}. Voice replay in Codex.`;
-  addToCodex(note);
-  
-  alert(`Deal accepted! Birth artifact? Cross p17.`);
+
+  addToCodex(`Closed "${trade.title}" −${cost.toLocaleString()} ${currency}. Balance now ${(isEros?balance:credits).toLocaleString()} ${currency}.`);
+
   updateWallet();
   showFeed();
+  alert(`Deal closed! −${cost.toLocaleString()} ${currency}. Birth an artifact to cross p17.`);
 }
 
 function showVoice() {
@@ -245,8 +285,8 @@ function initP13() {
   // Seed demo trades
   if (trades.length === 0) {
     trades = [
-      { id: 1, title: "Coffee Beans Bulk", desc: "From Colombia, 10 tons.", price: 5000, surprise: 0.68, voiceUrl: null, timestamp: new Date().toISOString(), status: 'open', buyers: [], expiry: Date.now() + 3600*1000 },
-      { id: 2, title: "Electronics Components", desc: "Asia supplier.", price: 12000, surprise: 0.55, voiceUrl: null, timestamp: new Date().toISOString(), status: 'open', buyers: [], expiry: Date.now() + 7200*1000 }
+      { id: 1, title: "Coffee Beans Bulk", desc: "From Colombia, 10 tons.", price: 300, currency: 'Credits', seller: '0xSeedA', surprise: 0.68, voiceUrl: null, timestamp: new Date().toISOString(), status: 'open', buyers: [], expiry: Date.now() + 3600*1000 },
+      { id: 2, title: "Electronics Components", desc: "Asia supplier.", price: 800, currency: '$EROS', seller: '0xSeedB', surprise: 0.55, voiceUrl: null, timestamp: new Date().toISOString(), status: 'open', buyers: [], expiry: Date.now() + 7200*1000 }
     ];
     localStorage.setItem('p13_trades', JSON.stringify(trades));
   }
@@ -289,14 +329,22 @@ function birthTradeArtifact(tradeId) {
   alert('Birth: Trade Artifact born! Cross to p17 wallet + p10 boost.');
 }
 
-// Cross nav + p10 pay
-function payWithP10Cross(amount, to) {
-  let p10b = parseFloat(localStorage.getItem('p10_balance')||'1284.7');
-  if (p10b < amount) { alert('p10 shallow: need more Credits.'); return false; }
-  localStorage.setItem('p10_balance', (p10b - amount).toFixed(2));
-  credits += Math.floor(amount*0.8); // p13 credit receive
+// Cross-bridge: top up exactly `need` Credits from p10 Stable.
+// Rate: 1 Credit costs 1.25 p10 (0.8 Credits per p10). Charges the real p10 cost
+// for the exact shortfall — no rounding slippage, no over/under-crediting.
+function bridgeCreditsFromP10(need) {
+  const RATE = 0.8;                         // Credits received per p10 spent
+  const p10Cost = Math.ceil(need / RATE);   // p10 to spend to cover `need` Credits
+  const p10b = parseFloat(localStorage.getItem('p10_balance') || '1284.7');
+  if (p10b < p10Cost) {
+    alert(`p10 Stable short: need ${p10Cost} p10 (have ${p10b.toFixed(2)}).`);
+    return false;
+  }
+  localStorage.setItem('p10_balance', (p10b - p10Cost).toFixed(2));
+  credits += need;                          // deliver exactly the shortfall
+  saveBalances();
   updateWallet();
-  addToCodex(`p10 cross pay ${amount} to ${to}`);
+  addToCodex(`Bridged ${need.toLocaleString()} Credits from p10 (−${p10Cost} p10).`);
   return true;
 }
 
