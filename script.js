@@ -80,11 +80,13 @@ function postTrade() {
 function showPost() {
   hideAll();
   document.getElementById('post').classList.remove('hidden');
+  setActiveNav('post');
 }
 
 function showFeed() {
   hideAll();
   document.getElementById('feed').classList.remove('hidden');
+  setActiveNav('feed');
   refreshFomoHeader();
   const list = document.getElementById('trade-list');
   list.innerHTML = '';
@@ -143,6 +145,7 @@ function acceptTrade(id) {
 function showVoice() {
   hideAll();
   document.getElementById('voice').classList.remove('hidden');
+  setActiveNav('voice');
 }
 
 function startVoiceNegotiation() {
@@ -174,6 +177,7 @@ function startVoiceNegotiation() {
 function showCodex() {
   hideAll();
   document.getElementById('codex').classList.remove('hidden');
+  setActiveNav('codex');
   const list = document.getElementById('codex-list');
   list.innerHTML = '<h3>Trade Codex (ALWAYS LEARNING + p6 spores)</h3>';
   
@@ -198,6 +202,13 @@ function addToCodex(note) {
 
 function hideAll() {
   document.querySelectorAll('.section').forEach(s => s.classList.add('hidden'));
+}
+
+// One protagonist per screen: highlight the active nav button (SENSE 시선 순서).
+function setActiveNav(view) {
+  document.querySelectorAll('.nav button').forEach(b => {
+    b.classList.toggle('active', b.dataset.view === view);
+  });
 }
 
 // Honest FOMO header: numbers reflect real trade state (code-display 100% match).
@@ -242,11 +253,9 @@ function initP13() {
     const feed = document.getElementById('feed');
     if (feed && !feed.classList.contains('hidden')) showFeed();
   }, 30000);
-  
-  // Show feed
-  setTimeout(() => {
-    document.getElementById('feed').classList.remove('hidden');
-  }, 300);
+
+  // Default view = Hot Deals (the hook), single-view discipline
+  showFeed();
 }
 
 // Births: p13 -> cross birth artifact (feeds p17 wallet or p14)

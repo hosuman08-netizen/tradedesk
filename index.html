@@ -21,15 +21,15 @@
       </div>
       
       <div class="nav">
-        <button onclick="showPost()">📝 Post Trade</button>
-        <button onclick="showFeed()">🔥 Hot Deals (FOMO)</button>
-        <button onclick="showVoice()">🎙️ Voice Negotiate (p6)</button>
-        <button onclick="showCodex()">📓 Codex</button>
+        <button data-view="feed" onclick="showFeed()">🔥 Hot Deals</button>
+        <button data-view="post" onclick="showPost()">📝 Post Trade</button>
+        <button data-view="voice" onclick="showVoice()">🎙️ Voice Negotiate</button>
+        <button data-view="codex" onclick="showCodex()">📓 Codex</button>
       </div>
     </header>
 
     <!-- Post Trade -->
-    <div id="post" class="section">
+    <div id="post" class="section hidden">
       <h2>Post New Trade Offer/Request</h2>
       <div class="form">
         <label>Trade Title</label>

@@ -11,8 +11,11 @@ h1 { font-size:26px; color:var(--gold); letter-spacing:-0.7px; } /* protagonist 
 .wallet { display:flex; gap:var(--grid); justify-content:center; margin:10px 0; }
 #wallet-info { font-family:monospace; font-size:10px; background:var(--card); padding:3px 7px; border-radius:4px; }
 .nav { display:flex; gap:5px; justify-content:center; margin-bottom:calc(var(--grid)*1.5); flex-wrap:wrap; }
-button { background:#15120f; color:var(--gold); border:1px solid #3a2f22; padding:7px 11px; border-radius:5px; cursor:pointer; font-size:12px; }
+button { background:#15120f; color:var(--gold); border:1px solid #3a2f22; padding:7px 11px; border-radius:5px; cursor:pointer; font-size:12px; transition:background .16s ease-out, border-color .16s ease-out, transform .1s ease-out; }
+button:hover { border-color:var(--gold); }
+button:active { transform:translateY(1px); }
 button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
+.nav button.active { background:var(--gold); color:#0a0806; font-weight:600; border-color:var(--gold); }
 .section { margin-bottom:calc(var(--grid)*2.5); }
 .hidden { display:none; }
 .form label { display:block; font-size:10px; color:var(--dim); margin:calc(var(--grid)*0.75) 0 2px; }
