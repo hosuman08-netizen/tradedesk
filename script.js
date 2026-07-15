@@ -92,7 +92,11 @@ function showFeed() {
   list.innerHTML = '';
   
   if (trades.length === 0) {
-    list.innerHTML = '<p>No trades. Post one with voice!</p>';
+    list.innerHTML = `<div class="empty">
+      <div class="empty-mark">🜂</div>
+      <p>No live deals yet.</p>
+      <button class="primary" onclick="showPost()">Post the first trade</button>
+    </div>`;
     return;
   }
   
