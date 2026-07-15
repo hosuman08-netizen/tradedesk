@@ -87,8 +87,11 @@ function postTrade() {
   localStorage.setItem('p13_trades', JSON.stringify(trades));
   
   addToCodex(`Posted: ${title}. Voice surprise ${surprise}. FOMO active.`);
-  
-  alert(`Trade posted! FOMO: ${Math.floor(Math.random()*15)+5} traders viewing.`);
+
+  // Honest confirmation: report the real live-deal count, not a fabricated number.
+  const now = Date.now();
+  const live = trades.filter(t => t.status === 'open' && (!t.expiry || t.expiry > now)).length;
+  alert(`Trade posted! ${live} live deal${live === 1 ? '' : 's'} on the board now.`);
   document.getElementById('trade-title').value = '';
   document.getElementById('trade-desc').value = '';
   showFeed();
@@ -142,7 +145,7 @@ function showFeed() {
       </div>
       <p class="tc-desc">${desc}</p>
       <div class="tc-meta">
-        <span class="tc-price">${trade.price.toLocaleString()} <em>${esc(currency)}</em></span>
+        <span class="tc-price">${trade.negotiated ? `<s class="tc-was">${trade.origPrice.toLocaleString()}</s> ` : ''}${trade.price.toLocaleString()} <em>${esc(currency)}${trade.negotiated ? ` · −${trade.discountPct}%` : ''}</em></span>
         <span class="surprise">👁 ${trade.surprise.toFixed(2)}${trade.voiceUrl ? ' 🎙' : ''}</span>
       </div>
       <button class="primary" onclick="acceptTrade(${trade.id})"${inactive ? ' disabled' : ''}>${label}</button>
@@ -202,11 +205,81 @@ function showVoice() {
   hideAll();
   document.getElementById('voice').classList.remove('hidden');
   setActiveNav('voice');
+  populateNegotiateTargets();
+}
+
+// Fill the negotiate picker with live, open deals (real state, not placeholders).
+function populateNegotiateTargets() {
+  const sel = document.getElementById('negotiate-target');
+  if (!sel) return;
+  const now = Date.now();
+  const open = trades.filter(t => t.status === 'open' && (!t.expiry || t.expiry > now));
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  if (open.length === 0) {
+    sel.innerHTML = '<option value="">No live deals to negotiate</option>';
+    return;
+  }
+  sel.innerHTML = open.map(t => {
+    const cur = t.currency || 'Credits';
+    const neg = t.negotiated ? ' (already −' + t.discountPct + '%)' : '';
+    return `<option value="${t.id}">${esc(t.title)} — ${t.price.toLocaleString()} ${esc(cur)}${neg}</option>`;
+  }).join('');
+}
+
+// Max discount a single voice negotiation can win, and floor per trade.
+const NEGOTIATE_MAX_PCT = 15;   // capped so numbers stay honest (no fake 90%-off)
+
+// Real effect: convert a measured surprise (0..1) into a bounded discount and
+// apply it to the actual trade price. Persists, one negotiation per deal.
+// Returns a result object the UI renders — the price change is genuine.
+function applyNegotiationDiscount(tradeId, surprise) {
+  const trade = trades.find(t => t.id === tradeId);
+  if (!trade) return { ok: false, reason: 'Deal not found.' };
+  if (trade.status !== 'open') return { ok: false, reason: 'Deal already closed.' };
+  if (trade.expiry && trade.expiry <= Date.now()) return { ok: false, reason: 'Deal expired.' };
+  if (trade.negotiated) return { ok: false, reason: `Already negotiated (−${trade.discountPct}%).`, trade };
+  if (trade.seller && trade.seller === wallet) return { ok: false, reason: "Can't negotiate your own deal." };
+
+  const s = Math.max(0, Math.min(1, surprise));
+  const pct = Math.round(s * NEGOTIATE_MAX_PCT);           // 0..15, honest mapping
+  if (pct <= 0) return { ok: false, reason: 'Pitch too flat — no discount. Try again.', trade };
+
+  const original = trade.origPrice || trade.price;
+  const newPrice = Math.max(1, Math.round(original * (1 - pct / 100)));
+  trade.origPrice = original;
+  trade.price = newPrice;
+  trade.discountPct = pct;
+  trade.negotiated = true;
+  localStorage.setItem('p13_trades', JSON.stringify(trades));
+
+  addToCodex(`Negotiated "${trade.title}": ${original.toLocaleString()} → ${newPrice.toLocaleString()} ${trade.currency || 'Credits'} (−${pct}%, surprise ${s.toFixed(2)}).`);
+  return { ok: true, pct, original, newPrice, trade };
+}
+
+function renderNegotiation(result, res, surprise, audioUrl) {
+  const audio = audioUrl ? `<audio controls src="${audioUrl}"></audio><br>` : '';
+  if (!res.ok) {
+    result.innerHTML = `${audio}Surprise ${surprise.toFixed(2)}. ${res.reason}`;
+    return;
+  }
+  const cur = (res.trade.currency || 'Credits');
+  result.innerHTML = `${audio}Surprise ${surprise.toFixed(2)} → <strong>−${res.pct}%</strong>. `
+    + `${res.original.toLocaleString()} → <strong>${res.newPrice.toLocaleString()} ${cur}</strong>. Locked in.`;
+  populateNegotiateTargets();
 }
 
 function startVoiceNegotiation() {
   const result = document.getElementById('negotiation-result');
-  result.innerHTML = 'p6 Voice negotiation started...';
+  const sel = document.getElementById('negotiate-target');
+  const tradeId = sel ? parseInt(sel.value) : NaN;
+  if (!wallet) { result.innerHTML = 'Connect wallet to negotiate.'; return; }
+  if (!Number.isFinite(tradeId)) { result.innerHTML = 'Pick a live deal first.'; return; }
+  result.innerHTML = 'p6 Voice negotiation started... speak your pitch.';
+
+  const finish = (surprise, url) => {
+    const res = applyNegotiationDiscount(tradeId, surprise);
+    renderNegotiation(result, res, surprise, url);
+  };
 
   navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
     const rec = new MediaRecorder(stream);
@@ -215,18 +288,18 @@ function startVoiceNegotiation() {
     rec.onstop = () => {
       const blob = new Blob(chunks, {type:'audio/webm'});
       const url = URL.createObjectURL(blob);
-      
       let surprise = 0.3;
       if (window.getP6LungSurprise) surprise = window.getP6LungSurprise();
-      
-      result.innerHTML = `<audio controls src="${url}"></audio><br>Negotiation surprise: ${surprise.toFixed(2)}. Deal terms improved!`;
-      // Simulate better terms
+      finish(surprise, url);
       stream.getTracks().forEach(t => t.stop());
     };
     rec.start();
     setTimeout(() => rec.stop(), 5000);
   }).catch(() => {
-    result.innerHTML = 'Voice fallback. Surprise 0.72 — Better deal!';
+    // No mic: still a real (fallback) surprise value drives a real discount.
+    let surprise = 0.5;
+    if (window.getP6LungSurprise) { const s = window.getP6LungSurprise(); if (s > 0) surprise = s; }
+    finish(surprise, null);
   });
 }
 

@@ -64,7 +64,9 @@
     <!-- Voice Negotiate -->
     <div id="voice" class="section hidden">
       <h2>Voice Negotiate (p6 Live)</h2>
-      <div id="negotiation"></div>
+      <p class="tagline" style="font-size:12px;margin-bottom:8px">Pick a live deal, pitch by voice. A more surprising pitch earns a bigger real discount (max 15%, once per deal).</p>
+      <label class="form" style="display:block;font-size:10px;color:var(--dim);margin-bottom:2px">Deal to negotiate</label>
+      <select id="negotiate-target" class="price-row" style="width:100%;background:#1a1712;border:1px solid #3a2f22;color:var(--text);padding:7px;border-radius:5px;margin-bottom:8px"></select>
       <button onclick="startVoiceNegotiation()">🎙 Start Voice Negotiation</button>
       <div id="negotiation-result"></div>
     </div>
