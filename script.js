@@ -311,4 +311,3 @@ function showCrossNav() {
 }
 
 window.onload = () => { initP13(); showCrossNav(); };
-EOF
