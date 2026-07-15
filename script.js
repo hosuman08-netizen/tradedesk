@@ -96,18 +96,30 @@ function showFeed() {
     return;
   }
   
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   trades.forEach(trade => {
     const leftSec = trade.expiry ? Math.max(0, Math.floor((trade.expiry - Date.now())/1000)) : 0;
-    const fomo = leftSec > 0 ? `⏱ ${Math.floor(leftSec/60)}m left` : 'expired';
+    const expired = leftSec <= 0;
+    const mins = Math.floor(leftSec / 60);
+    const fomo = expired ? 'expired'
+      : mins >= 60 ? `⏱ ${Math.floor(mins/60)}h ${mins%60}m left`
+      : `⏱ ${mins}m left`;
+    const fomoClass = (!expired && mins < 60) ? 'urgent' : '';
+    const desc = trade.desc.length > 80 ? esc(trade.desc.slice(0,80)).trimEnd() + '…' : esc(trade.desc);
     const el = document.createElement('div');
-    el.className = 'trade-card';
+    el.className = 'trade-card' + (expired ? ' expired' : '');
     el.innerHTML = `
-      <strong>${trade.title}</strong><br>
-      <small>${trade.desc.substring(0,80)}...</small><br>
-      <div class="surprise">👁 Surprise: ${trade.surprise.toFixed(2)} ${trade.voiceUrl ? '🎙' : ''}</div>
-      <div>Price: ${trade.price} Credits • ${fomo}</div>
-      <button onclick="acceptTrade(${trade.id})">Accept Deal (FOMO: limited)</button>
-      <button onclick="birthTradeArtifact(${trade.id})" style="font-size:10px">Birth Artifact → p17/p10</button>
+      <div class="tc-head">
+        <strong class="tc-title">${esc(trade.title)}</strong>
+        <span class="tc-time ${fomoClass}">${fomo}</span>
+      </div>
+      <p class="tc-desc">${desc}</p>
+      <div class="tc-meta">
+        <span class="tc-price">${trade.price.toLocaleString()} <em>Credits</em></span>
+        <span class="surprise">👁 ${trade.surprise.toFixed(2)}${trade.voiceUrl ? ' 🎙' : ''}</span>
+      </div>
+      <button class="primary" onclick="acceptTrade(${trade.id})"${expired ? ' disabled' : ''}>${expired ? 'Expired' : 'Accept Deal'}</button>
+      <button class="ghost" onclick="birthTradeArtifact(${trade.id})">Birth Artifact → p17/p10</button>
     `;
     list.appendChild(el);
   });
