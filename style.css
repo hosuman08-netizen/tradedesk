@@ -49,3 +49,7 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .empty p { margin-bottom:16px; }
 #voice-preview, #negotiation-result { color:var(--dim); font-size:12px; margin-top:8px; }
 #voice-preview audio, #negotiation-result audio { width:100%; margin-top:6px; }
+.app-footer { text-align:center; margin-top:calc(var(--grid)*4); padding-top:calc(var(--grid)*1.5); border-top:1px solid #241d15; font-size:11px; color:var(--dim); }
+.app-footer a { color:var(--dim); text-decoration:none; transition:color .16s ease-out; }
+.app-footer a:hover { color:var(--gold); }
+.app-footer .dot { margin:0 6px; opacity:0.5; }
