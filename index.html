@@ -3,59 +3,234 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>TradeForge — Fictional Trade Simulation</title>
-  <meta name="description" content="TradeForge — a fictional trade simulation. Post deals, negotiate by voice, and trade with in-app tokens. Entertainment only. Not real trading or investment.">
+  <title>TradeForge — Fictional Trading Simulation</title>
+  <meta name="description" content="TradeForge — a fictional trading simulation. Candles, order book, price-time matching with partial fills, average-entry P&L. Entertainment only. Not real trading or investment.">
   <link rel="canonical" href="https://hosuman08-netizen.github.io/tradedesk/">
 
   <!-- Open Graph -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://hosuman08-netizen.github.io/tradedesk/">
-  <meta property="og:title" content="TradeForge — Fictional Trade Simulation">
-  <meta property="og:description" content="Post a deal, pitch it by voice, and trade with in-app tokens. A fictional trade sim — entertainment only, no real money.">
+  <meta property="og:title" content="TradeForge — Fictional Trading Simulation">
+  <meta property="og:description" content="A paper trading terminal: candles, depth, price-time matching, average-entry P&L. Fictional simulation — entertainment only, no real money.">
   <meta property="og:site_name" content="TradeForge">
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="TradeForge — Fictional Trade Simulation">
-  <meta name="twitter:description" content="Post a deal, pitch it by voice, and trade with in-app tokens. A fictional trade sim — entertainment only, no real money.">
+  <meta name="twitter:title" content="TradeForge — Fictional Trading Simulation">
+  <meta name="twitter:description" content="A paper trading terminal: candles, depth, price-time matching, average-entry P&L. Fictional simulation — entertainment only, no real money.">
 
   <link rel="stylesheet" href="style.css">
   <link rel="manifest" href="manifest.json">
 </head>
 <body>
+  <!-- Always-on disclosure: pinned, never scrolls away, present on every view. -->
+  <div class="disclaimer-bar">
+    <span>⚠️ FICTIONAL TRADING SIMULATION • 18+ • ENTERTAINMENT ONLY • NO REAL GOODS, MONEY, OR INVESTMENT</span>
+    <em>All symbols are invented in-app units. Prices are simulated. Nothing here is financial advice.</em>
+  </div>
+
   <div class="container">
     <header>
-      <div class="disclaimer">⚠️ FICTIONAL TRADE SIMULATION • 18+ • FOR ENTERTAINMENT ONLY • NO REAL GOODS, MONEY, OR INVESTMENT — nothing here is financial advice</div>
-      <h1>TradeForge</h1>
-      <p class="tagline">Post a deal. Pitch by voice. Trade. (Simulation)</p>
-
-      <div class="wallet">
-        <button onclick="connectWallet()">🔗 Connect</button>
-        <div id="wallet-info">Not connected • 1,250 TFC / 450 Credits</div>
+      <div class="brandbar">
+        <h1>TradeForge</h1>
+        <div class="livewrap">
+          <span class="live"><i class="pulse"></i>Sim feed live</span>
+          <span id="wallet-info" class="wallet-chip">—</span>
+          <button class="ghost-btn" onclick="connectWallet()">🔗 Connect</button>
+        </div>
       </div>
 
-      <div class="nav">
+      <nav class="nav">
+        <button data-view="terminal" onclick="showTerminal()">📈 Terminal</button>
         <button data-view="feed" onclick="showFeed()">🔥 Hot Deals</button>
         <button data-view="post" onclick="showPost()">📝 Post Trade</button>
         <button data-view="voice" onclick="showVoice()">🎙️ Voice Negotiate</button>
         <button data-view="journal" onclick="showJournal()">📓 Journal</button>
-      </div>
+      </nav>
     </header>
 
+    <!-- ══════════════════ TERMINAL ══════════════════ -->
+    <div id="terminal" class="section hidden">
+      <div class="term">
+
+        <!-- LEFT: markets + portfolio -->
+        <aside class="col-left">
+          <div class="panel">
+            <div class="panel-h">Markets <em>vs <span id="of-quote">CR</span></em></div>
+            <div id="mk-list" class="mk-list"></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h">Paper account
+              <em class="hgroup"><button class="mini" onclick="tfShare()">Share P&amp;L</button><button class="mini" onclick="tfReset()">Reset</button></em>
+            </div>
+            <div class="pf">
+              <div class="pf-row"><span>Equity</span><b id="pf-equity" class="pf-v">—</b></div>
+              <div class="pf-row"><span>Buying power</span><b id="pf-bp" class="pf-v">—</b></div>
+              <div class="pf-row"><span>Today</span><b id="pf-day" class="pf-v">—</b></div>
+              <div class="pf-row"><span>Unrealized</span><b id="pf-unreal" class="pf-v">—</b></div>
+              <div class="pf-row"><span>Realized</span><b id="pf-real" class="pf-v">—</b></div>
+            </div>
+            <p class="fineprint">Unrealized P&amp;L moves equity only. Realized P&amp;L — net of fees — is what settles into cash.</p>
+          </div>
+        </aside>
+
+        <!-- CENTER: ticker + chart + ticket -->
+        <main class="col-mid">
+          <div class="panel tickerbar">
+            <div class="tk-id">
+              <b id="tk-sym">TFC/CR</b>
+              <em id="tk-name">TradeForge Coin</em>
+            </div>
+            <div class="tk-main">
+              <span id="tk-price" class="tk-price">—</span>
+              <span id="tk-change" class="tk-change">—</span>
+            </div>
+            <div class="tk-stats">
+              <span><em>24h high</em><b id="tk-high">—</b></span>
+              <span><em>24h low</em><b id="tk-low">—</b></span>
+              <span><em>24h volume</em><b id="tk-vol">—</b></span>
+            </div>
+          </div>
+
+          <div class="panel chartpanel">
+            <div class="chart-h">
+              <div id="tf-bar" class="tf-bar"></div>
+              <div id="ohlc-readout" class="ohlc"></div>
+            </div>
+            <canvas id="chart-canvas" class="chart"></canvas>
+            <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders.</div>
+          </div>
+
+          <div id="order-form" class="panel ticket buy">
+            <div class="of-sides">
+              <button id="of-buy" class="of-side buy on" onclick="tfSetSide('buy')">Buy</button>
+              <button id="of-sell" class="of-side sell" onclick="tfSetSide('sell')">Sell</button>
+            </div>
+
+            <div class="of-grid">
+              <label class="of-f">
+                <span>Order type</span>
+                <select id="of-type" onchange="tfSetType(this.value)">
+                  <option value="market">Market — fills now, pays slippage</option>
+                  <option value="limit" selected>Limit — rests until price reaches you</option>
+                  <option value="stop-limit">Stop-limit — arms at a trigger</option>
+                  <option value="trailing-stop">Trailing stop — follows the extreme</option>
+                  <option value="oco">OCO — take-profit + stop, one cancels the other</option>
+                </select>
+              </label>
+
+              <label class="of-f hidden" id="row-stop">
+                <span id="lbl-stop">Stop trigger</span>
+                <input id="of-stop" type="number" step="any" inputmode="decimal">
+              </label>
+
+              <label class="of-f" id="row-price">
+                <span id="lbl-price">Limit price</span>
+                <input id="of-price" type="number" step="any" inputmode="decimal" oninput="tfPriceInput()">
+              </label>
+
+              <label class="of-f hidden" id="row-trail">
+                <span>Trailing distance (%)</span>
+                <input id="of-trail" type="number" step="0.1" value="2.5" inputmode="decimal">
+              </label>
+
+              <label class="of-f">
+                <span>Amount <i id="of-unit">TFC</i></span>
+                <input id="of-qty" type="number" step="any" inputmode="decimal" placeholder="0" oninput="tfQtyInput()">
+              </label>
+            </div>
+
+            <input id="of-slider" class="of-slider" type="range" min="0" max="100" step="1" value="0" oninput="tfSlider(this.value)">
+            <div class="of-pcts">
+              <button onclick="tfSetPct(25)">25%</button>
+              <button onclick="tfSetPct(50)">50%</button>
+              <button onclick="tfSetPct(75)">75%</button>
+              <button onclick="tfSetPct(100)">100%</button>
+            </div>
+
+            <div class="of-sum">
+              <span><em id="of-avail-lbl">Buying power</em><b id="of-avail">—</b></span>
+              <span><em>Order total</em><b id="of-total">—</b></span>
+              <span><em>Est. fee</em><b id="of-fee">—</b></span>
+            </div>
+
+            <button id="of-submit" class="of-submit buy" onclick="tfSubmit()">Buy TFC</button>
+          </div>
+        </main>
+
+        <!-- RIGHT: book + depth + tape -->
+        <aside class="col-right">
+          <div class="panel">
+            <div class="panel-h">Order book
+              <em id="ob-group" class="grouping">
+                <button data-g="1" class="on" onclick="tfSetGroup(1)">1×</button>
+                <button data-g="5" onclick="tfSetGroup(5)">5×</button>
+                <button data-g="20" onclick="tfSetGroup(20)">20×</button>
+              </em>
+            </div>
+            <div class="ob-head"><span>Price</span><span>Size</span><span>Total</span></div>
+            <div id="ob-asks" class="ob-side"></div>
+            <div id="ob-mid" class="ob-mid"></div>
+            <div id="ob-bids" class="ob-side"></div>
+            <div class="bp">
+              <em>Buy pressure</em>
+              <div class="bp-track"><i id="bp-bar" class="bp-fill up"></i></div>
+              <b id="bp-val" class="bp-val">—</b>
+            </div>
+            <canvas id="depth-canvas" class="depth"></canvas>
+          </div>
+
+          <div class="panel">
+            <div class="panel-h">Market trades</div>
+            <div class="tp-head"><span>Price</span><span>Amount</span><span>Time</span></div>
+            <div id="tape-list" class="tape"></div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- News rail: every entry is a real jump in the simulated price path -->
+      <div class="panel newsbar">
+        <span class="news-lbl">Shocks</span>
+        <div id="news-list" class="news"></div>
+      </div>
+
+      <!-- Blotter: the four views every venue keeps separate -->
+      <div class="panel blotter">
+        <div id="bl-tabs" class="bl-tabs">
+          <button data-b="open" class="on" onclick="tfBlotter('open')">Open orders<b id="c-open"></b></button>
+          <button data-b="positions" onclick="tfBlotter('positions')">Positions<b id="c-pos"></b></button>
+          <button data-b="trades" onclick="tfBlotter('trades')">Trades<b id="c-trades"></b></button>
+          <button data-b="closed" onclick="tfBlotter('closed')">Order history<b id="c-closed"></b></button>
+          <button class="cancel-all" onclick="tfCancelAll()">Cancel all</button>
+        </div>
+        <div id="bl-body"></div>
+      </div>
+
+      <p class="fineprint centered">
+        How the simulation works: prices follow a seeded random walk with GARCH(1,1) volatility clustering and Poisson news shocks, and the path is a pure function of wall-clock time —
+        so reloading resumes the same market instead of rerolling it. Within each minute the tick path is a Brownian bridge, which is why a live tab never drifts off that path.
+        Resting orders match by price-time priority behind a real queue, which is why partial fills happen. Fees are 0.02% maker / 0.06% taker.
+        None of it is real, and none of it is investment advice.
+      </p>
+    </div>
+
+    <!-- ══════════════════ P2P DEALS (original TradeForge) ══════════════════ -->
+
     <!-- Post Trade -->
-    <div id="post" class="section hidden">
+    <div id="post" class="section narrow hidden">
       <h2>Post New Trade Offer/Request</h2>
       <div class="form">
         <label>Trade Title</label>
         <input id="trade-title" placeholder="Bulk Coffee Beans from Colombia">
-        
+
         <label>Voice Pitch (optional — records a pitch score for your listing)</label>
         <button onclick="recordVoiceTrade()">🎙 Record Voice</button>
         <div id="voice-preview"></div>
-        
+
         <label>Details</label>
         <textarea id="trade-desc" placeholder="Quantity, specs, delivery terms..."></textarea>
-        
+
         <label>Price / Terms</label>
         <div class="price-row">
           <input id="trade-price" type="number" min="1" value="5000">
@@ -70,13 +245,13 @@
     </div>
 
     <!-- Feed -->
-    <div id="feed" class="section hidden">
+    <div id="feed" class="section narrow hidden">
       <h2>Hot Trade Deals <span id="fomo-header" class="fomo">🔥 —</span></h2>
       <div id="trade-list" class="grid"></div>
     </div>
 
     <!-- Voice Negotiate -->
-    <div id="voice" class="section hidden">
+    <div id="voice" class="section narrow hidden">
       <h2>Voice Negotiate</h2>
       <p class="tagline" style="font-size:12px;margin-bottom:8px">Pick a live deal and pitch by voice. A stronger pitch earns a bigger discount (max 15%, once per deal).</p>
       <label class="form" style="display:block;font-size:10px;color:var(--dim);margin-bottom:2px">Deal to negotiate</label>
@@ -86,10 +261,11 @@
     </div>
 
     <!-- Journal -->
-    <div id="journal" class="section hidden">
+    <div id="journal" class="section narrow hidden">
       <h2>📓 Trade Journal</h2>
       <div id="journal-list"></div>
     </div>
+
     <footer class="app-footer">
       <a href="https://hosuman08-netizen.github.io/legion-hub/">🎮 More apps</a>
       <span class="dot">·</span>
@@ -99,7 +275,12 @@
     </footer>
   </div>
 
+  <div id="toasts" class="toasts"></div>
+
   <script src="./voice-pitch.js"></script>
+  <script src="./market-engine.js"></script>
+  <script src="./chart.js"></script>
+  <script src="./terminal.js"></script>
   <script src="script.js"></script>
 <script>window.LEGION_APP='tradedesk';window.LEGION_ANALYTICS_URL='https://legion-analytics.hoyashi95.workers.dev';</script>
 <script src="legion-beacon.js"></script>

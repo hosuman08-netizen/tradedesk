@@ -25,15 +25,37 @@ function loadNum(key, fallback) {
 }
 
 // Single writer for balances → never drift between memory and storage.
+// Also the one place that pushes the deal board's ledger into the terminal
+// account, so both halves of the app share a single wallet.
 function saveBalances() {
   localStorage.setItem('tf_balance', String(balance));
   localStorage.setItem('tf_credits', String(credits));
   localStorage.setItem('tf_reserve', String(reserve));
+  pushToEngine();
 }
+
+// Deal board → terminal. Credits are the terminal's quote currency (CR) and TFC
+// is a real spot position there, so a closed deal moves the same numbers.
+function pushToEngine() {
+  const M = window.MarketEngine;
+  if (!M || !M.account) return;
+  M.account.cash = credits;
+  M.position('TFC').qty = balance;
+  M.save();
+}
+
+// Terminal → deal board. Called by the engine whenever it settles a fill.
+window.tfSetBalances = function (tfc, cash) {
+  balance = tfc;
+  credits = cash;
+  updateWallet();
+};
 
 function updateWallet() {
   const el = document.getElementById('wallet-info');
-  if (el) el.innerHTML = `${wallet || 'Not connected'} • ${balance.toLocaleString()} TFC / ${credits.toLocaleString()} Credits`;
+  if (!el) return;
+  const who = wallet || 'guest';
+  el.textContent = `${who} • ${Math.round(credits).toLocaleString()} CR · ${balance.toLocaleString(undefined, { maximumFractionDigits: 2 })} TFC`;
 }
 
 function connectWallet() {
@@ -131,6 +153,14 @@ function postTrade() {
   document.getElementById('trade-title').value = '';
   document.getElementById('trade-desc').value = '';
   showFeed();
+}
+
+function showTerminal() {
+  hideAll();
+  document.getElementById('terminal').classList.remove('hidden');
+  setActiveNav('terminal');
+  // Canvases sized while hidden measure 0 — re-render once visible.
+  if (typeof window.tfRelayout === 'function') window.tfRelayout();
 }
 
 function showPost() {
@@ -438,8 +468,14 @@ function initApp() {
     if (feed && !feed.classList.contains('hidden')) showFeed();
   }, 30000);
 
-  // Default view = Hot Deals (the hook), single-view discipline
-  showFeed();
+  // Boot the trading terminal, then land on it — it is the primary surface.
+  if (typeof window.tfInitTerminal === 'function') {
+    window.tfInitTerminal();
+    showTerminal();
+  } else {
+    showFeed();
+  }
+  updateWallet();
 }
 
 // Top up exactly `need` Credits from the in-app reserve pool.
