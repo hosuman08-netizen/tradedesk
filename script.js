@@ -336,12 +336,45 @@ function startVoiceNegotiation() {
   });
 }
 
+// Compute honest trading stats from real data (no fabricated numbers).
+// Only counts deals this account actually closed / negotiated.
+function computeJournalStats() {
+  const closed = trades.filter(t => t.status === 'accepted' && t.buyer && t.buyer === wallet);
+  const negotiated = trades.filter(t => t.negotiated && t.discountPct > 0);
+  let spentTFC = 0, spentCredits = 0, saved = 0;
+  closed.forEach(t => {
+    if ((t.currency || 'Credits') === 'TFC') spentTFC += t.price; else spentCredits += t.price;
+  });
+  negotiated.forEach(t => { if (t.origPrice) saved += (t.origPrice - t.price); });
+  const bestPct = negotiated.reduce((m, t) => Math.max(m, t.discountPct || 0), 0);
+  const avgPct = negotiated.length
+    ? Math.round(negotiated.reduce((a, t) => a + (t.discountPct || 0), 0) / negotiated.length)
+    : 0;
+  return { closedCount: closed.length, spentTFC, spentCredits, negCount: negotiated.length, saved, bestPct, avgPct };
+}
+
+function renderJournalStats() {
+  const s = computeJournalStats();
+  if (s.closedCount === 0 && s.negCount === 0) return '';
+  const spent = [];
+  if (s.spentTFC) spent.push(`${s.spentTFC.toLocaleString()} TFC`);
+  if (s.spentCredits) spent.push(`${s.spentCredits.toLocaleString()} Cr`);
+  const cell = (label, val) => `<div class="stat"><span class="stat-val">${val}</span><span class="stat-lbl">${label}</span></div>`;
+  return `<div class="stat-strip">
+    ${cell('deals closed', s.closedCount)}
+    ${cell('spent', spent.length ? spent.join(' / ') : '—')}
+    ${cell('negotiated', s.negCount)}
+    ${cell('best discount', s.bestPct ? `−${s.bestPct}%` : '—')}
+    ${cell('saved by voice', s.saved ? s.saved.toLocaleString() : '—')}
+  </div>`;
+}
+
 function showJournal() {
   hideAll();
   document.getElementById('journal').classList.remove('hidden');
   setActiveNav('journal');
   const list = document.getElementById('journal-list');
-  list.innerHTML = '<h3>Trade Journal</h3>';
+  list.innerHTML = renderJournalStats() + '<h3>Trade Journal</h3>';
 
   if (journal.length === 0) {
     list.innerHTML += '<p>Post or accept trades to build your journal.</p>';
