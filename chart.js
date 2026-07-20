@@ -21,6 +21,112 @@
     return step * mag;
   }
 
+  // ── indicator math ─────────────────────────────────────────────────────────
+  // Every series is index-aligned to the input array and NaN-filled until it has
+  // enough lookback to be defined — so a value is only drawn where it is real.
+  // These are the textbook definitions (Wilder RSI, standard EMA/MACD, session
+  // VWAP), not decorative approximations: the numbers match what a real terminal
+  // would print for the same OHLCV.
+
+  function sma(vals, n) {
+    const out = new Array(vals.length).fill(NaN);
+    let sum = 0;
+    for (let i = 0; i < vals.length; i++) {
+      sum += vals[i];
+      if (i >= n) sum -= vals[i - n];
+      if (i >= n - 1) out[i] = sum / n;
+    }
+    return out;
+  }
+
+  // EMA that tolerates a NaN prefix (so it can smooth a MACD line that only
+  // becomes defined partway through). Seeded with the SMA of the first n samples.
+  function emaSeries(vals, n) {
+    const out = new Array(vals.length).fill(NaN);
+    const k = 2 / (n + 1);
+    let prev = 0, count = 0, sum = 0;
+    for (let i = 0; i < vals.length; i++) {
+      const v = vals[i];
+      if (!Number.isFinite(v)) continue;
+      count++;
+      if (count < n) { sum += v; continue; }
+      if (count === n) { sum += v; prev = sum / n; out[i] = prev; continue; }
+      prev = v * k + prev * (1 - k);
+      out[i] = prev;
+    }
+    return out;
+  }
+
+  function bollinger(closes, n, k) {
+    const mid = sma(closes, n);
+    const upper = new Array(closes.length).fill(NaN);
+    const lower = new Array(closes.length).fill(NaN);
+    for (let i = n - 1; i < closes.length; i++) {
+      let s = 0;
+      for (let j = i - n + 1; j <= i; j++) { const dd = closes[j] - mid[i]; s += dd * dd; }
+      const sd = Math.sqrt(s / n);
+      upper[i] = mid[i] + k * sd;
+      lower[i] = mid[i] - k * sd;
+    }
+    return { mid: mid, upper: upper, lower: lower };
+  }
+
+  // Session VWAP: cumulative typical-price × volume, anchored at each local day
+  // boundary — the standard intraday anchoring, deterministic per bar.
+  function vwap(bars) {
+    const out = new Array(bars.length).fill(NaN);
+    let cumPV = 0, cumV = 0, day = null;
+    for (let i = 0; i < bars.length; i++) {
+      const b = bars[i], dt = new Date(b.t);
+      const key = dt.getFullYear() + '-' + dt.getMonth() + '-' + dt.getDate();
+      if (key !== day) { day = key; cumPV = 0; cumV = 0; }
+      const tp = (b.h + b.l + b.c) / 3;
+      cumPV += tp * b.v; cumV += b.v;
+      out[i] = cumV > 0 ? cumPV / cumV : b.c;
+    }
+    return out;
+  }
+
+  // Wilder's RSI — the smoothing every charting package uses, not a plain SMA of
+  // gains, so it agrees with TradingView/Binance to the decimal.
+  function rsi(closes, n) {
+    const out = new Array(closes.length).fill(NaN);
+    let avgG = 0, avgL = 0;
+    for (let i = 1; i < closes.length; i++) {
+      const ch = closes[i] - closes[i - 1];
+      const g = ch > 0 ? ch : 0, l = ch < 0 ? -ch : 0;
+      if (i <= n) {
+        avgG += g; avgL += l;
+        if (i === n) { avgG /= n; avgL /= n; out[i] = avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL); }
+      } else {
+        avgG = (avgG * (n - 1) + g) / n;
+        avgL = (avgL * (n - 1) + l) / n;
+        out[i] = avgL === 0 ? 100 : 100 - 100 / (1 + avgG / avgL);
+      }
+    }
+    return out;
+  }
+
+  function macd(closes, fast, slow, signal) {
+    const ef = emaSeries(closes, fast), es = emaSeries(closes, slow);
+    const line = closes.map(function (_, i) {
+      return (Number.isFinite(ef[i]) && Number.isFinite(es[i])) ? ef[i] - es[i] : NaN;
+    });
+    const sig = emaSeries(line, signal);
+    const hist = line.map(function (v, i) {
+      return (Number.isFinite(v) && Number.isFinite(sig[i])) ? v - sig[i] : NaN;
+    });
+    return { line: line, signal: sig, hist: hist };
+  }
+
+  // Indicator identity colours. Each is always paired with a text label in the
+  // legend, so meaning never rides on hue alone.
+  const IND = {
+    ema7: '#e6b45e', ema25: '#5b9bd5', ema99: '#b07cc6',
+    ma: '#d98a4b', boll: '#9a7b4f', vwap: '#3fb5a0',
+    rsi: '#e6b45e', macdLine: '#5b9bd5', macdSignal: '#e6b45e'
+  };
+
   function Chart(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
@@ -34,8 +140,17 @@
     this.padRight = 58;
     this.padBottom = 20;
     this.onHover = null;
+    this.overlays = [];     // price-pane indicators: ema / ma / boll / vwap
+    this.osc = null;        // one lower-pane oscillator: rsi / macd
     this._bind();
   }
+
+  // cfg = { overlays:[{kind,period,k}], osc:{kind,period|fast,slow,signal} | null }
+  Chart.prototype.setIndicators = function (cfg) {
+    this.overlays = (cfg && cfg.overlays) || [];
+    this.osc = (cfg && cfg.osc) || null;
+    this.render();
+  };
 
   Chart.prototype._bind = function () {
     const self = this;
@@ -133,8 +248,30 @@
 
     const W = cssW - this.padRight;
     const H = cssH - this.padBottom;
-    const volH = Math.round(H * 0.20);
-    const priceH = H - volH - 6;
+    // Reserve a lower pane when an oscillator (RSI/MACD) is active. The price +
+    // volume region shrinks to make room; nothing overlaps.
+    const oscH = this.osc ? Math.max(64, Math.round(H * 0.22)) : 0;
+    const oscGap = this.osc ? 10 : 0;
+    const mainH = H - oscH - oscGap;
+    const oscTop = mainH + oscGap;
+    const volH = Math.round(mainH * 0.20);
+    const priceH = mainH - volH - 6;
+
+    // Global indices of the visible window, so index-aligned indicator series
+    // (computed over the full history for correct lookback) line up with bars.
+    const gEnd = this.bars.length - this.offset;
+    const gStart = Math.max(0, gEnd - this.view);
+    const closes = this.bars.map(function (b) { return b.c; });
+    const self = this;
+
+    // Build the visible portion of each overlay series once.
+    const ovSeries = this.overlays.map(function (ov) {
+      if (ov.kind === 'ema') return { ov: ov, type: 'line', color: ov.color || IND['ema' + ov.period] || GOLD, data: emaSeries(closes, ov.period), label: 'EMA ' + ov.period };
+      if (ov.kind === 'ma') return { ov: ov, type: 'line', color: ov.color || IND.ma, data: sma(closes, ov.period), label: 'MA ' + ov.period };
+      if (ov.kind === 'vwap') return { ov: ov, type: 'line', color: ov.color || IND.vwap, data: vwap(self.bars), label: 'VWAP' };
+      if (ov.kind === 'boll') { const b = bollinger(closes, ov.period, ov.k); return { ov: ov, type: 'band', color: ov.color || IND.boll, data: b, label: 'BOLL ' + ov.period }; }
+      return { type: 'none', data: [] };
+    });
 
     let hi = -Infinity, lo = Infinity, maxV = 0;
     for (let i = 0; i < bars.length; i++) {
@@ -147,6 +284,15 @@
       if (!Number.isFinite(l.price)) return;
       if (l.price > hi) hi = l.price;
       if (l.price < lo) lo = l.price;
+    });
+    // Bollinger bands / VWAP can sit outside the candle range — grow the scale so
+    // an active overlay is never clipped at the pane edge.
+    ovSeries.forEach(function (s) {
+      for (let i = 0; i < bars.length; i++) {
+        const g = gStart + i;
+        if (s.type === 'line') { const v = s.data[g]; if (Number.isFinite(v)) { if (v > hi) hi = v; if (v < lo) lo = v; } }
+        else if (s.type === 'band') { const u = s.data.upper[g], d2 = s.data.lower[g]; if (Number.isFinite(u) && u > hi) hi = u; if (Number.isFinite(d2) && d2 < lo) lo = d2; }
+      }
     });
     const pad = (hi - lo) * 0.08 || Math.abs(hi) * 0.01 || 1;
     hi += pad; lo -= pad;
@@ -169,14 +315,14 @@
     }
 
     // ── time scale ────────────────────────────────────────────────────────
-    const self = this;
     const labelEvery = Math.max(1, Math.ceil(bars.length / Math.max(2, Math.floor(W / 74))));
     ctx.textAlign = 'center'; ctx.fillStyle = AXIS;
     for (let i = 0; i < bars.length; i += labelEvery) {
       const px = x(i);
       if (px > W - 20) continue;
       ctx.strokeStyle = GRID;
-      ctx.beginPath(); ctx.moveTo(Math.round(px) + 0.5, 0); ctx.lineTo(Math.round(px) + 0.5, H); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(Math.round(px) + 0.5, 0); ctx.lineTo(Math.round(px) + 0.5, mainH); ctx.stroke();
+      if (oscH) { ctx.beginPath(); ctx.moveTo(Math.round(px) + 0.5, oscTop); ctx.lineTo(Math.round(px) + 0.5, H); ctx.stroke(); }
       // Skip labels that would be clipped by the left edge.
       if (px < 22) continue;
       ctx.fillStyle = AXIS;
@@ -209,6 +355,69 @@
       const hgt = Math.max(1, Math.abs(yc - yo));
       ctx.fillStyle = col;
       ctx.fillRect(cx - body / 2, top, body, hgt);
+    }
+
+    // ── indicator overlays (EMA / MA / Bollinger / VWAP) ──────────────────
+    // Clipped to the price pane so no line bleeds into the volume or osc pane.
+    function drawLine(data, color, dash) {
+      ctx.save();
+      ctx.strokeStyle = color; ctx.lineWidth = 1.4;
+      if (dash) ctx.setLineDash(dash);
+      ctx.beginPath();
+      let started = false;
+      for (let i = 0; i < bars.length; i++) {
+        const v = data[gStart + i];
+        if (!Number.isFinite(v)) { started = false; continue; }
+        const px = x(i), py = y(v);
+        if (started) ctx.lineTo(px, py); else { ctx.moveTo(px, py); started = true; }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, 0, W, priceH); ctx.clip();
+    ovSeries.forEach(function (s) {
+      if (s.type === 'line') drawLine(s.data, s.color);
+      else if (s.type === 'band') {
+        // Faint fill between the bands, then the three lines.
+        ctx.save();
+        ctx.fillStyle = 'rgba(154,123,79,0.10)';
+        ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < bars.length; i++) { const u = s.data.upper[gStart + i]; if (!Number.isFinite(u)) { continue; } const px = x(i), py = y(u); if (started) ctx.lineTo(px, py); else { ctx.moveTo(px, py); started = true; } }
+        for (let i = bars.length - 1; i >= 0; i--) { const d2 = s.data.lower[gStart + i]; if (!Number.isFinite(d2)) continue; ctx.lineTo(x(i), y(d2)); }
+        ctx.closePath(); ctx.fill();
+        ctx.restore();
+        drawLine(s.data.upper, s.color);
+        drawLine(s.data.lower, s.color);
+        drawLine(s.data.mid, s.color, [2, 3]);
+      }
+    });
+    ctx.restore();
+
+    // ── indicator legend (top-left) — values at the hovered or latest bar ──
+    if (ovSeries.length) {
+      const legIdx = (this.cross && this.cross.x < W)
+        ? gStart + Math.max(0, Math.min(bars.length - 1, Math.floor(this.cross.x / bw)))
+        : gEnd - 1;
+      ctx.font = FONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+      let ly = 10;
+      ovSeries.forEach(function (s) {
+        let txt;
+        if (s.type === 'band') {
+          const u = s.data.upper[legIdx], m = s.data.mid[legIdx], d2 = s.data.lower[legIdx];
+          if (!Number.isFinite(m)) return;
+          txt = s.label + '  ' + d2.toFixed(self.decimals) + ' · ' + m.toFixed(self.decimals) + ' · ' + u.toFixed(self.decimals);
+        } else {
+          const v = s.data[legIdx];
+          if (!Number.isFinite(v)) return;
+          txt = s.label + '  ' + v.toFixed(self.decimals);
+        }
+        ctx.fillStyle = s.color;
+        ctx.fillRect(4, ly - 1, 8, 2);
+        ctx.fillText(txt, 16, ly);
+        ly += 13;
+      });
     }
 
     // ── overlay price lines (avg entry, resting orders) ───────────────────
@@ -244,6 +453,74 @@
     ctx.fillRect(W + 1, lastY - 8, this.padRight - 1, 16);
     ctx.fillStyle = '#0a0806'; ctx.font = '600 ' + FONT; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.fillText(last.c.toFixed(this.decimals), W + 5, lastY);
+
+    // ── lower oscillator pane (RSI or MACD) ───────────────────────────────
+    if (this.osc) {
+      const oscIdx = (this.cross && this.cross.x < W)
+        ? gStart + Math.max(0, Math.min(bars.length - 1, Math.floor(this.cross.x / bw)))
+        : gEnd - 1;
+      ctx.save();
+      // top divider
+      ctx.strokeStyle = GRID; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(0, oscTop + 0.5); ctx.lineTo(W, oscTop + 0.5); ctx.stroke();
+      ctx.font = FONT; ctx.textBaseline = 'middle';
+
+      if (this.osc.kind === 'rsi') {
+        const r = rsi(closes, this.osc.period);
+        const yv = v => oscTop + (1 - v / 100) * oscH;
+        // 30/70 guide band + midline
+        ctx.fillStyle = 'rgba(197,164,110,0.06)';
+        ctx.fillRect(0, yv(70), W, yv(30) - yv(70));
+        [30, 50, 70].forEach(function (g) {
+          ctx.strokeStyle = g === 50 ? GRID : 'rgba(139,111,71,0.35)';
+          ctx.setLineDash(g === 50 ? [] : [3, 3]);
+          ctx.beginPath(); ctx.moveTo(0, Math.round(yv(g)) + 0.5); ctx.lineTo(W, Math.round(yv(g)) + 0.5); ctx.stroke();
+          ctx.setLineDash([]);
+          ctx.fillStyle = AXIS; ctx.textAlign = 'left'; ctx.fillText(String(g), W + 6, yv(g));
+        });
+        ctx.strokeStyle = IND.rsi; ctx.lineWidth = 1.4; ctx.beginPath();
+        let started = false;
+        for (let i = 0; i < bars.length; i++) { const v = r[gStart + i]; if (!Number.isFinite(v)) { started = false; continue; } const px = x(i), py = yv(v); if (started) ctx.lineTo(px, py); else { ctx.moveTo(px, py); started = true; } }
+        ctx.stroke();
+        const rv = r[oscIdx];
+        ctx.fillStyle = IND.rsi; ctx.textAlign = 'left';
+        ctx.fillText('RSI ' + this.osc.period + '  ' + (Number.isFinite(rv) ? rv.toFixed(1) : '—'), 6, oscTop + 9);
+      } else if (this.osc.kind === 'macd') {
+        const m = macd(closes, this.osc.fast, this.osc.slow, this.osc.signal);
+        let mMax = 0;
+        for (let i = 0; i < bars.length; i++) {
+          const g = gStart + i;
+          [m.line[g], m.signal[g], m.hist[g]].forEach(function (v) { if (Number.isFinite(v)) mMax = Math.max(mMax, Math.abs(v)); });
+        }
+        mMax = mMax || 1;
+        const midY = oscTop + oscH / 2;
+        const yv = v => midY - (v / mMax) * (oscH / 2 - 4);
+        // zero line
+        ctx.strokeStyle = GRID; ctx.beginPath(); ctx.moveTo(0, Math.round(midY) + 0.5); ctx.lineTo(W, Math.round(midY) + 0.5); ctx.stroke();
+        // histogram
+        for (let i = 0; i < bars.length; i++) {
+          const v = m.hist[gStart + i]; if (!Number.isFinite(v)) continue;
+          const px = x(i), py = yv(v);
+          ctx.fillStyle = v >= 0 ? 'rgba(46,189,133,0.55)' : 'rgba(229,84,75,0.55)';
+          ctx.fillRect(px - body / 2, Math.min(py, midY), Math.max(1, body), Math.abs(py - midY));
+        }
+        function oscLine(data, color) {
+          ctx.strokeStyle = color; ctx.lineWidth = 1.3; ctx.beginPath();
+          let started = false;
+          for (let i = 0; i < bars.length; i++) { const v = data[gStart + i]; if (!Number.isFinite(v)) { started = false; continue; } const px = x(i), py = yv(v); if (started) ctx.lineTo(px, py); else { ctx.moveTo(px, py); started = true; } }
+          ctx.stroke();
+        }
+        oscLine(m.line, IND.macdLine);
+        oscLine(m.signal, IND.macdSignal);
+        const lv = m.line[oscIdx], sv = m.signal[oscIdx], hv = m.hist[oscIdx];
+        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+        ctx.fillStyle = AXIS; ctx.fillText('MACD ' + this.osc.fast + ' ' + this.osc.slow + ' ' + this.osc.signal, 6, oscTop + 9);
+        ctx.fillStyle = IND.macdLine; ctx.fillText(Number.isFinite(lv) ? lv.toFixed(this.decimals) : '—', 120, oscTop + 9);
+        ctx.fillStyle = IND.macdSignal; ctx.fillText(Number.isFinite(sv) ? sv.toFixed(this.decimals) : '—', 176, oscTop + 9);
+        ctx.fillStyle = (hv >= 0 ? UP : DOWN); ctx.fillText(Number.isFinite(hv) ? (hv >= 0 ? '+' : '') + hv.toFixed(this.decimals) : '—', 232, oscTop + 9);
+      }
+      ctx.restore();
+    }
 
     // ── crosshair ─────────────────────────────────────────────────────────
     if (this.cross && this.cross.x < W) {

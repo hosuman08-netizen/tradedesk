@@ -17,6 +17,60 @@ let balance = loadNum('tf_balance', 1250);   // TFC (TradeForge Coin)
 let credits = loadNum('tf_credits', 450);    // Credits
 let reserve = loadNum('tf_reserve', 2000);   // in-app reserve pool (converts to Credits)
 let trades = JSON.parse(localStorage.getItem('tf_trades') || '[]');
+
+// 5H trade retention loop
+function tfDayKey(off){const d=new Date();d.setDate(d.getDate()+(off||0));return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function bumpTradeStreak(){
+  try{
+    let st=JSON.parse(localStorage.getItem('tf_streak')||'{}');
+    const t0=tfDayKey(0);
+    if(st.last===t0) return st;
+    const y=tfDayKey(-1), y2=tfDayKey(-2);
+    if(st.last && st.last!==y && st.last===y2 && (st.count||0)>=3){
+      const ready=!st.shieldLast||((new Date(t0)-new Date(st.shieldLast))/86400000)>=7;
+      if(ready){st.shieldLast=t0;st.last=y;try{legionTrack('streak_freeze',{count:st.count})}catch(e){}}
+    }
+    st.count=(st.last===y)?(st.count||0)+1:1; st.last=t0;
+    localStorage.setItem('tf_streak',JSON.stringify(st));
+    try{legionTrack('streak',{count:st.count})}catch(e){}
+    return st;
+  }catch(e){return {count:0};}
+}
+function bumpTradeDay(){
+  try{
+    const k='tf_day_'+tfDayKey(0);
+    const n=(+(localStorage.getItem(k)||0))+1;
+    localStorage.setItem(k,String(n));
+    return n;
+  }catch(e){return 0;}
+}
+function renderTradeLoop(){
+  try{
+    let el=document.getElementById('tfLoop');
+    if(!el){
+      el=document.createElement('div'); el.id='tfLoop';
+      el.style.cssText='margin:8px 0;padding:10px;border:1px solid #2a2438;border-radius:12px;font-size:12px;display:flex;flex-wrap:wrap;gap:8px;align-items:center';
+      const host=document.querySelector('header')||document.querySelector('h1')||document.body;
+      host.insertAdjacentElement('afterend', el);
+    }
+    const st=JSON.parse(localStorage.getItem('tf_streak')||'{}');
+    const today=+(localStorage.getItem('tf_day_'+tfDayKey(0))||0);
+    const end=new Date(); end.setHours(24,0,0,0);
+    const ms=Math.max(0,end-Date.now());
+    const clock=Math.floor(ms/3600000)+'h '+Math.floor((ms%3600000)/60000)+'m';
+    el.innerHTML='<span>🔥 '+(st.count||0)+'일</span><span>오늘 체결 '+today+'</span><span>총 '+(trades&&trades.length||0)+'건</span><span>리셋 '+clock+'</span>'
+      +'<button type="button" id="tfShare" style="margin-left:auto;padding:6px 10px;border:0;border-radius:8px;background:#1c1826;color:#ece8f1">보드 공유</button>'
+      +'<span style="opacity:.7;font-size:11px">시뮬 · 투자권유 아님</span>';
+    const b=document.getElementById('tfShare');
+    if(b) b.onclick=function(){
+      const text='TradeDesk sim · 🔥'+(st.count||0)+'일 · 오늘 '+today+' · https://hosuman08-netizen.github.io/tradedesk/\n투자권유 아님';
+      if(navigator.share) navigator.share({text}).catch(function(){});
+      else if(navigator.clipboard) navigator.clipboard.writeText(text);
+      try{legionTrack('share_peak',{})}catch(e){}
+    };
+  }catch(e){}
+}
+
 let journal = JSON.parse(localStorage.getItem('tf_journal') || '[]');
 
 function loadNum(key, fallback) {
@@ -143,6 +197,7 @@ function postTrade() {
 
   trades.unshift(trade);
   localStorage.setItem('tf_trades', JSON.stringify(trades));
+  try{bumpTradeStreak();bumpTradeDay();renderTradeLoop();}catch(e){}
 
   addToJournal(`Posted "${title}" — pitch score ${pitchScore.toFixed(2)}. Live for 24h.`);
 

@@ -28,7 +28,8 @@
     depth: null,
     priceTouched: false,   // has the user typed their own limit price?
     lastPrices: {},
-    seenFills: 0
+    seenFills: 0,
+    ind: { ema7: true, ema25: true, ema99: false, ma25: false, boll: false, vwap: false, osc: 'none' }
   };
 
   function d(sym) { return M.decimals(M.symbolById(sym)); }
@@ -206,6 +207,83 @@
     });
     renderChart(true);
   };
+
+  // ── technical indicators ─────────────────────────────────────────────────
+  // Config is pure UI state; the chart computes every series deterministically
+  // from the same OHLCV bars it draws, so displayed values match the candles.
+
+  function loadInd() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('tf2_ind') || '{}');
+      Object.keys(T.ind).forEach(function (k) { if (saved[k] != null) T.ind[k] = saved[k]; });
+    } catch (e) { /* keep defaults */ }
+  }
+
+  function applyIndicators() {
+    if (!T.chart) return;
+    const ov = [];
+    if (T.ind.ema7) ov.push({ kind: 'ema', period: 7 });
+    if (T.ind.ema25) ov.push({ kind: 'ema', period: 25 });
+    if (T.ind.ema99) ov.push({ kind: 'ema', period: 99 });
+    if (T.ind.ma25) ov.push({ kind: 'ma', period: 25 });
+    if (T.ind.boll) ov.push({ kind: 'boll', period: 20, k: 2 });
+    if (T.ind.vwap) ov.push({ kind: 'vwap' });
+    let osc = null;
+    if (T.ind.osc === 'rsi') osc = { kind: 'rsi', period: 14 };
+    else if (T.ind.osc === 'macd') osc = { kind: 'macd', fast: 12, slow: 26, signal: 9 };
+    T.chart.setIndicators({ overlays: ov, osc: osc });
+    // Reflect the active count on the button so state is visible when closed.
+    const btn = $('ind-btn');
+    if (btn) {
+      const n = ov.length + (osc ? 1 : 0);
+      btn.classList.toggle('active', n > 0);
+      const c = btn.querySelector('.ind-count');
+      if (n > 0) {
+        if (c) c.textContent = n; else { const s = document.createElement('b'); s.className = 'ind-count'; s.textContent = n; btn.appendChild(s); }
+      } else if (c) { c.remove(); }
+    }
+  }
+
+  function syncIndMenu() {
+    Array.prototype.forEach.call(document.querySelectorAll('#ind-menu input[data-ind]'), function (i) {
+      i.checked = !!T.ind[i.dataset.ind];
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('#ind-menu input[data-osc]'), function (i) {
+      i.checked = (i.dataset.osc === T.ind.osc);
+    });
+  }
+
+  function persistInd() { localStorage.setItem('tf2_ind', JSON.stringify(T.ind)); }
+
+  global.tfToggleInd = function (key) {
+    T.ind[key] = !T.ind[key];
+    persistInd();
+    applyIndicators();
+  };
+
+  global.tfSetOsc = function (v) {
+    T.ind.osc = v;
+    persistInd();
+    applyIndicators();
+  };
+
+  global.tfIndMenu = function (e) {
+    if (e) e.stopPropagation();
+    const menu = $('ind-menu'), btn = $('ind-btn');
+    if (!menu) return;
+    const open = menu.classList.toggle('hidden') === false;
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open) syncIndMenu();
+  };
+
+  // Click-away close — the menu should not linger over the chart.
+  document.addEventListener('click', function (e) {
+    const menu = $('ind-menu');
+    if (!menu || menu.classList.contains('hidden')) return;
+    if (e.target.closest && (e.target.closest('#ind-menu') || e.target.closest('#ind-btn'))) return;
+    menu.classList.add('hidden');
+    const btn = $('ind-btn'); if (btn) btn.setAttribute('aria-expanded', 'false');
+  });
 
   function onHover(bar) {
     const el = $('ohlc-readout');
@@ -737,6 +815,9 @@
     global.tfSetType(T.type);
     global.tfSetSide('buy');
     global.tfSetGroup(1);
+    loadInd();
+    applyIndicators();
+    syncIndMenu();
     renderMarkets(true);
     renderNews();
     syncOrderForm(true);

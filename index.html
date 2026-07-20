@@ -96,10 +96,24 @@
           <div class="panel chartpanel">
             <div class="chart-h">
               <div id="tf-bar" class="tf-bar"></div>
+              <button id="ind-btn" class="ind-btn" onclick="tfIndMenu(event)" aria-haspopup="true" aria-expanded="false">ƒ<span> Indicators</span></button>
               <div id="ohlc-readout" class="ohlc"></div>
             </div>
+            <div id="ind-menu" class="ind-menu hidden" role="menu">
+              <div class="ind-grp">Overlays</div>
+              <label class="ind-opt"><input type="checkbox" data-ind="ema7" onchange="tfToggleInd('ema7')"><i class="sw" style="background:#e6b45e"></i>EMA 7</label>
+              <label class="ind-opt"><input type="checkbox" data-ind="ema25" onchange="tfToggleInd('ema25')"><i class="sw" style="background:#5b9bd5"></i>EMA 25</label>
+              <label class="ind-opt"><input type="checkbox" data-ind="ema99" onchange="tfToggleInd('ema99')"><i class="sw" style="background:#b07cc6"></i>EMA 99</label>
+              <label class="ind-opt"><input type="checkbox" data-ind="ma25" onchange="tfToggleInd('ma25')"><i class="sw" style="background:#d98a4b"></i>MA 25</label>
+              <label class="ind-opt"><input type="checkbox" data-ind="boll" onchange="tfToggleInd('boll')"><i class="sw" style="background:#9a7b4f"></i>Bollinger 20, 2</label>
+              <label class="ind-opt"><input type="checkbox" data-ind="vwap" onchange="tfToggleInd('vwap')"><i class="sw" style="background:#3fb5a0"></i>VWAP <em class="ind-note">session</em></label>
+              <div class="ind-grp">Lower pane <em class="ind-note">one</em></div>
+              <label class="ind-opt"><input type="radio" name="tf-osc" data-osc="none" onchange="tfSetOsc('none')">None</label>
+              <label class="ind-opt"><input type="radio" name="tf-osc" data-osc="rsi" onchange="tfSetOsc('rsi')">RSI 14</label>
+              <label class="ind-opt"><input type="radio" name="tf-osc" data-osc="macd" onchange="tfSetOsc('macd')">MACD 12, 26, 9</label>
+            </div>
             <canvas id="chart-canvas" class="chart"></canvas>
-            <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders.</div>
+            <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders. Indicators are computed from the same bars.</div>
           </div>
 
           <div id="order-form" class="panel ticket buy">
