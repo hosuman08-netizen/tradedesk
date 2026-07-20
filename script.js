@@ -52,12 +52,15 @@ function recordVoiceTrade() {
     rec.onstop = () => {
       const blob = new Blob(chunks, {type:'audio/webm'});
       const url = URL.createObjectURL(blob);
-
-      const pitchScore = getPitchScore();
-
-      preview.innerHTML = `<audio controls src="${url}"></audio><br>Pitch score: ${pitchScore.toFixed(2)} — attached to your listing.`;
-      window._tfVoice = { url, pitchScore };
       stream.getTracks().forEach(t => t.stop());
+      preview.innerHTML = `<audio controls src="${url}"></audio><br>Scoring your pitch…`;
+
+      // Real analysis of the recorded audio (louder, more sustained, more
+      // expressive → higher score). Falls back gracefully if decode fails.
+      analyzeRecording(blob).then(pitchScore => {
+        preview.innerHTML = `<audio controls src="${url}"></audio><br>Pitch score: <strong>${pitchScore.toFixed(2)}</strong> — attached to your listing.`;
+        window._tfVoice = { url, pitchScore };
+      });
     };
     rec.start();
     setTimeout(() => rec.stop(), 4000);
@@ -68,7 +71,18 @@ function recordVoiceTrade() {
   });
 }
 
-// Voice pitch scorer. Uses the local pitch engine if present, else a fallback.
+// Analyze a recorded audio blob into a real pitch score in [0,1].
+// Delegates to the audio analyzer; resolves to the fallback if unavailable.
+function analyzeRecording(blob, fallback = 0.3) {
+  if (typeof window.analyzeVoiceBlob === 'function') {
+    return window.analyzeVoiceBlob(blob).then(s =>
+      (Number.isFinite(s) && s > 0) ? s : fallback
+    );
+  }
+  return Promise.resolve(fallback);
+}
+
+// Sync pitch score for no-mic paths only (returns last real measurement or fallback).
 function getPitchScore(fallback = 0.3) {
   if (typeof window.getVoicePitchScore === 'function') {
     const s = window.getVoicePitchScore();
@@ -309,8 +323,10 @@ function startVoiceNegotiation() {
     rec.onstop = () => {
       const blob = new Blob(chunks, {type:'audio/webm'});
       const url = URL.createObjectURL(blob);
-      finish(getPitchScore(0.3), url);
       stream.getTracks().forEach(t => t.stop());
+      result.innerHTML = 'Scoring your pitch…';
+      // Real analysis: the recorded audio drives the actual discount.
+      analyzeRecording(blob, 0.3).then(score => finish(score, url));
     };
     rec.start();
     setTimeout(() => rec.stop(), 5000);
