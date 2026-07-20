@@ -228,6 +228,7 @@ function acceptTrade(id) {
   trade.buyer = wallet;
   if (!trade.buyers.includes(wallet)) trade.buyers.push(wallet);
   localStorage.setItem('tf_trades', JSON.stringify(trades));
+  if (window.legionTrack) window.legionTrack('activate');
 
   addToJournal(`Closed "${trade.title}" −${cost.toLocaleString()} ${currency}. Balance now ${(isTfc?balance:credits).toLocaleString()} ${currency}.`);
 
