@@ -747,6 +747,31 @@
     if (global.legionTrack) try { global.legionTrack('tape_pick_side', { s: T.symbol, side: side === 'sell' ? 'sell' : 'buy' }); } catch (e) { /* beacon optional */ }
   };
 
+  /* WAVE86: copy picked tape print. Existing M.tape + tapePickKey only — no invented ticks. */
+  global.tfCopyPickedTape = function () {
+    if (!tapePickKey) { toast('No picked print.', 'warn'); return; }
+    const rows = M.tape(T.symbol, 22);
+    const key = t => t.t + ':' + t.price + ':' + t.qty + ':' + t.side;
+    let picked = null;
+    for (let i = 0; i < rows.length; i++) {
+      if (key(rows[i]) === tapePickKey) { picked = rows[i]; break; }
+    }
+    if (!picked) { toast('Picked print left tape.', 'warn'); return; }
+    const dec = d(T.symbol);
+    const dt = new Date(picked.t);
+    const p = n => String(n).padStart(2, '0');
+    const hh = p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds());
+    const txt = T.symbol + ' pick ' + (picked.side === 'buy' ? 'BUY' : 'SELL')
+      + ' ' + fmt(picked.price, dec) + ' × ' + compact(picked.qty)
+      + ' @ ' + hh + ' · paper sim · not a live quote';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { toast('Picked print copied.', 'ok'); }, function () { toast(txt, 'ok'); });
+    } else {
+      toast(txt, 'ok');
+    }
+    if (global.legionTrack) try { global.legionTrack('tape_copy_pick', { s: T.symbol }); } catch (e) { /* beacon optional */ }
+  };
+
   // ──────────────────────────────── trade tape ────────────────────────────────
 
   let lastTapeKey = '';
