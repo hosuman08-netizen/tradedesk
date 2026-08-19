@@ -698,6 +698,23 @@
     syncOrderForm();
   };
 
+  /* WAVE57: copy 1탁 (best bid/ask) from existing book. No invented ticks. */
+  global.tfCopyTop = function () {
+    const b = M.book(T.symbol, T.group, 11);
+    const dec = d(T.symbol);
+    const bid = b && b.bids && b.bids[0];
+    const ask = b && b.asks && b.asks[0];
+    if (!bid || !ask) { toast('No book.', 'warn'); return; }
+    const txt = T.symbol + ' 1탁 BID ' + fmt(bid.price, dec) + ' ASK ' + fmt(ask.price, dec)
+      + ' · paper sim · not a live quote';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { toast('1탁 copied.', 'ok'); }, function () { toast(txt, 'ok'); });
+    } else {
+      toast(txt, 'ok');
+    }
+    if (global.legionTrack) try { global.legionTrack('ob_copy_top', { s: T.symbol }); } catch (e) { /* beacon optional */ }
+  };
+
   // ──────────────────────────────── trade tape ────────────────────────────────
 
   let lastTapeKey = '';
