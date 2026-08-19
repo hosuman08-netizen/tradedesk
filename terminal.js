@@ -802,6 +802,24 @@
         + '<span class="dim">' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + '</span>'
         + '</div>';
     }).join('');
+
+    /* WAVE94: picked-row clock 1-line. Existing M.tape t only — no invented ticks. */
+    const whenEl = $('tp-pick-when');
+    if (whenEl) {
+      let picked = null;
+      if (tapePickKey) {
+        for (let i = 0; i < rows.length; i++) {
+          if (key(rows[i]) === tapePickKey) { picked = rows[i]; break; }
+        }
+      }
+      if (picked) {
+        const dt = new Date(picked.t);
+        const p = n => String(n).padStart(2, '0');
+        whenEl.textContent = '선택 ' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + ' · paper sim';
+      } else {
+        whenEl.textContent = tapePickKey ? '선택 행 테이프 밖' : '';
+      }
+    }
   }
 
   function renderNews() {
