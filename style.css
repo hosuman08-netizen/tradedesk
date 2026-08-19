@@ -307,6 +307,9 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 /* WAVE112: after jump flash picked tape row — no invented ticks */
 .tp-row.picked-flash { animation:pickFlash .8s ease-out; }
 @keyframes pickFlash { 0% { background:#e0b55255; } 100% { background:#2a2310; } }
+/* WAVE120: during row flash also emphasize clock line — no invented ticks */
+.tp-when.when-flash { animation:whenFlash .8s ease-out; }
+@keyframes whenFlash { 0% { background:#e0b55255; color:var(--gold); } 100% { background:transparent; color:var(--gold); } }
 /* only prints that just arrived animate in — animating the whole list reads as flicker */
 .tp-row.fresh { animation:tapeIn .3s ease-out; }
 .tp-row span:nth-child(n+2) { text-align:right; }

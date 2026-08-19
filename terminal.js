@@ -824,6 +824,9 @@
         whenEl.classList.remove('has-pick');
         whenEl.title = '';
       }
+      /* WAVE120: during picked-flash also emphasize clock line. Existing t only. */
+      if (picked && Date.now() < tapeFlashUntil) whenEl.classList.add('when-flash');
+      else whenEl.classList.remove('when-flash');
       /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
       /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
       whenEl.onclick = function () {
@@ -831,6 +834,7 @@
         if (!row) return;
         tapeFlashUntil = Date.now() + 800;
         row.classList.add('picked-flash');
+        whenEl.classList.add('when-flash');
         try { row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
         catch (e) { try { row.scrollIntoView(); } catch (e2) { /* no scroll */ } }
         if (global.legionTrack) try { global.legionTrack('tape_jump_flash', { s: T.symbol }); } catch (e3) { /* beacon optional */ }
