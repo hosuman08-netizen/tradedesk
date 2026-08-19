@@ -744,6 +744,7 @@
   /* WAVE168: retap during ring = restart ring. Existing M.tape t only. */
   /* WAVE171: ring tap = ring off. Jump still after off. No invented ticks. */
   /* WAVE175: after ring off, keep clock-line focus. No invented ticks. */
+  /* WAVE179: focus retap restarts ring — separate from jump + tape-row restart. */
   let pickWhenRingTok = 0;
   function pickWhenId() { return 'tp-pick-when'; }
   function pickWhenRingMs() { return 400; }
@@ -777,6 +778,14 @@
     try { el.setAttribute('data-ring-off', '1'); } catch (e2) {}
     try { el.setAttribute('data-ring-tap', '1'); } catch (e3) {}
     holdPickWhenFocus();
+  }
+  function restartPickWhenRingFromFocus() {
+    const el = $(pickWhenId());
+    if (!el || el.getAttribute('data-focus-after-kill') !== '1') return false;
+    armPickWhenRing();
+    try { el.setAttribute('data-re-ring', '1'); } catch (e0) {}
+    try { el.setAttribute('data-re-from-focus', '1'); } catch (e1) {}
+    return true;
   }
   function armPickWhenRing() {
     const el = $(pickWhenId());
@@ -927,9 +936,14 @@
       /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
       /* WAVE133: re-tap during flash = kill residual glow now. No invented ticks. */
       /* WAVE171: ring tap = ring off. Jump still after off. No invented ticks. */
+      /* WAVE179: after kill+focus, retap restarts ring. Jump stays a later tap. */
       whenEl.onclick = function () {
         if (pickWhenRingIsOn()) {
           killPickWhenRing();
+          return;
+        }
+        if (whenEl.getAttribute('data-focus-after-kill') === '1') {
+          restartPickWhenRingFromFocus();
           return;
         }
         const row = el.querySelector('.tp-row.picked');
