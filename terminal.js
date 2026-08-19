@@ -825,8 +825,16 @@
         whenEl.title = '';
       }
       /* WAVE120: during picked-flash also emphasize clock line. Existing t only. */
-      if (picked && Date.now() < tapeFlashUntil) whenEl.classList.add('when-flash');
-      else whenEl.classList.remove('when-flash');
+      /* WAVE127: after flash window, drop clock afterglow. Do not wait for next tape paint. */
+      try { clearTimeout(whenEl._wfT); } catch (e) {}
+      if (picked && Date.now() < tapeFlashUntil) {
+        whenEl.classList.add('when-flash');
+        whenEl._wfT = setTimeout(function () {
+          whenEl.classList.remove('when-flash');
+        }, Math.max(0, tapeFlashUntil - Date.now()));
+      } else {
+        whenEl.classList.remove('when-flash');
+      }
       /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
       /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
       whenEl.onclick = function () {
@@ -835,6 +843,10 @@
         tapeFlashUntil = Date.now() + 800;
         row.classList.add('picked-flash');
         whenEl.classList.add('when-flash');
+        try { clearTimeout(whenEl._wfT); } catch (e4) {}
+        whenEl._wfT = setTimeout(function () {
+          whenEl.classList.remove('when-flash');
+        }, 800);
         try { row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
         catch (e) { try { row.scrollIntoView(); } catch (e2) { /* no scroll */ } }
         if (global.legionTrack) try { global.legionTrack('tape_jump_flash', { s: T.symbol }); } catch (e3) { /* beacon optional */ }
