@@ -192,6 +192,8 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
   flex:1; min-width:120px; accent-color:var(--gold); height:4px;
 }
 .rp-stamp { font-family:var(--mono); font-size:10px; color:var(--dim); white-space:nowrap; }
+.rp-bm { font-family:var(--mono); font-size:10px; color:var(--gold); white-space:nowrap; }
+.replay-bar button:disabled { opacity:.35; cursor:not-allowed; }
 
 /* indicators control */
 .ind-btn { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; font-size:10px; border-radius:4px;

@@ -137,6 +137,9 @@
               <button type="button" id="rp-4x" onclick="tfReplaySpeed(4)">4×</button>
               <input id="rp-scrub" type="range" min="24" max="400" value="400" step="1" oninput="tfReplayScrub(this.value)" aria-label="Bar replay scrub">
               <span id="rp-stamp" class="rp-stamp">live sim</span>
+              <button type="button" id="rp-mark" onclick="tfReplayMark()" title="Bookmark this bar">★ Mark</button>
+              <button type="button" id="rp-jump" onclick="tfReplayJump()" title="Jump to bookmark">Jump</button>
+              <span id="rp-bm" class="rp-bm"></span>
             </div>
             <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders. Indicators are computed from the same bars. Replay scrubs existing bars only — no new price source.</div>
           </div>

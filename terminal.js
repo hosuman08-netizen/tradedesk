@@ -298,6 +298,20 @@
     if (x1) x1.classList.toggle('on', T.replay.on && T.replay.speed === 1);
     if (x4) x4.classList.toggle('on', T.replay.on && T.replay.speed === 4);
     if (st) st.textContent = replayStamp();
+    const bm = loadBm();
+    const jump = $('rp-jump'), mark = $('rp-mark'), bmEl = $('rp-bm');
+    if (jump) jump.disabled = !bm;
+    if (mark) {
+      var onMark = !!(bm && T.symbol === bm.symbol && T.tf === bm.tf && T.replay.on && T.replay.idx === bm.idx);
+      mark.classList.toggle('on', onMark);
+    }
+    if (bmEl) {
+      if (!bm) bmEl.textContent = '';
+      else {
+        var when = bm.t ? new Date(bm.t).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : ('bar ' + bm.idx);
+        bmEl.textContent = '★ ' + bm.symbol + ' ' + bm.tf + ' · ' + when;
+      }
+    }
   }
 
   function renderChart(reset) {
@@ -343,6 +357,59 @@
     };
     T.replay.timer = setInterval(step, T.replay.speed === 4 ? 100 : 400);
     renderChart(false);
+  };
+
+  /* WAVE45: TradingView-style replay bookmark. Existing bars only — no new prices. */
+  function loadBm() {
+    try { return JSON.parse(localStorage.getItem('tf2_rp_bm') || 'null'); } catch (e) { return null; }
+  }
+  function saveBm(o) {
+    try { localStorage.setItem('tf2_rp_bm', JSON.stringify(o)); } catch (e) { /* quota */ }
+  }
+  global.tfReplayMark = function () {
+    var all = candleSeries();
+    var idx = T.replay.on
+      ? Math.max(24, Math.min(all.length, T.replay.idx || all.length))
+      : all.length;
+    var bars = T.replay.on ? replaySlice() : all;
+    var b = bars[bars.length - 1];
+    saveBm({
+      symbol: T.symbol,
+      tf: T.tf,
+      idx: idx,
+      t: b ? b.t : 0
+    });
+    syncReplayUi();
+  };
+  global.tfReplayJump = function () {
+    var bm = loadBm();
+    if (!bm || !bm.idx) return;
+    var rec = M.symbolById(bm.symbol);
+    if (bm.symbol && bm.symbol !== T.symbol && rec && rec.id === bm.symbol) {
+      T.symbol = bm.symbol;
+      T.priceTouched = false;
+      try { localStorage.setItem('tf2_symbol', T.symbol); } catch (e) { /* quota */ }
+      renderMarkets(true);
+      renderTicker();
+      syncOrderForm(true);
+      renderBook();
+      renderTape();
+      renderNews();
+      renderBlotter();
+    }
+    if (bm.tf && bm.tf !== T.tf && M.TF[bm.tf]) {
+      T.tf = bm.tf;
+      try { localStorage.setItem('tf2_tf', T.tf); } catch (e) { /* quota */ }
+      Array.prototype.forEach.call(document.querySelectorAll('#tf-bar button'), function (b) {
+        b.classList.toggle('on', b.dataset.tf === T.tf);
+      });
+    }
+    stopReplayTimer();
+    var all = candleSeries();
+    T.replay.on = true;
+    T.replay.speed = 0;
+    T.replay.idx = Math.max(24, Math.min(all.length, Number(bm.idx) || 24));
+    renderChart(true);
   };
 
   global.tfSetTf = function (tf) {
