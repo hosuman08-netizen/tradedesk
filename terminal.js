@@ -837,9 +837,18 @@
       }
       /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
       /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
+      /* WAVE133: re-tap during flash = kill residual glow now. No invented ticks. */
       whenEl.onclick = function () {
         const row = el.querySelector('.tp-row.picked');
         if (!row) return;
+        if (Date.now() < tapeFlashUntil || whenEl.classList.contains('when-flash')) {
+          tapeFlashUntil = 0;
+          try { clearTimeout(whenEl._wfT); } catch (eKill) {}
+          whenEl._wfT = null;
+          whenEl.classList.remove('when-flash');
+          row.classList.remove('picked-flash');
+          return;
+        }
         tapeFlashUntil = Date.now() + 800;
         row.classList.add('picked-flash');
         whenEl.classList.add('when-flash');
