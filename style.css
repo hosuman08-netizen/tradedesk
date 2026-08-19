@@ -302,6 +302,8 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .tp-row.picked { background:#2a2310; box-shadow:inset 2px 0 0 var(--gold); }
 /* WAVE94: picked print clock 1-line — existing t only, no invented ticks */
 .tp-when { padding:4px 9px; font-family:var(--mono); font-size:10px; color:var(--dim); border-top:1px solid var(--line); min-height:18px; }
+/* WAVE102: clock line jumps to picked tape row — no invented ticks */
+.tp-when.has-pick { cursor:pointer; color:var(--gold); }
 /* only prints that just arrived animate in — animating the whole list reads as flicker */
 .tp-row.fresh { animation:tapeIn .3s ease-out; }
 .tp-row span:nth-child(n+2) { text-align:right; }

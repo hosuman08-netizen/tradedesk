@@ -816,9 +816,21 @@
         const dt = new Date(picked.t);
         const p = n => String(n).padStart(2, '0');
         whenEl.textContent = '선택 ' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + ' · paper sim';
+        whenEl.classList.add('has-pick');
+        whenEl.title = '선택 행으로 점프';
       } else {
         whenEl.textContent = tapePickKey ? '선택 행 테이프 밖' : '';
+        whenEl.classList.remove('has-pick');
+        whenEl.title = '';
       }
+      /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
+      whenEl.onclick = function () {
+        const row = el.querySelector('.tp-row.picked');
+        if (!row) return;
+        try { row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+        catch (e) { try { row.scrollIntoView(); } catch (e2) { /* no scroll */ } }
+        if (global.legionTrack) try { global.legionTrack('tape_jump_pick', { s: T.symbol }); } catch (e3) { /* beacon optional */ }
+      };
     }
   }
 
