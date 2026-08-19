@@ -739,6 +739,16 @@
   /* WAVE78: selected tape row highlight. Key = existing print only. */
   let tapePickKey = '';
   let tapeFlashUntil = 0;
+  /* WAVE156: after residual glow dies, focus clock line. Existing #tp-pick-when only. */
+  function pickWhenId() { return 'tp-pick-when'; }
+  function focusPickWhen() {
+    const el = $(pickWhenId());
+    if (!el) return false;
+    try { el.tabIndex = 0; } catch (e0) {}
+    try { el.focus(); } catch (e1) {}
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e2) {}
+    return true;
+  }
   global.tfPickTape = function (p, side, tMs, qty) {
     if (!(p > 0)) return;
     const newKey = String(tMs || '') + ':' + p + ':' + (qty == null ? '' : qty) + ':' + (side === 'sell' ? 'sell' : 'buy');
@@ -754,6 +764,7 @@
       const tapeEl = $('tape-list');
       const row = tapeEl && tapeEl.querySelector('.tp-row.picked');
       if (row) row.classList.remove('picked-flash');
+      focusPickWhen();
       return;
     }
     if (side === 'buy' || side === 'sell') global.tfSetSide(side);
