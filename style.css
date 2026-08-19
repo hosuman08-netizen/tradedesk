@@ -310,6 +310,14 @@ table.bl td { padding:6px 9px; border-bottom:1px solid var(--line); font-family:
 table.bl tbody tr:hover { background:#141109; }
 table.bl td b { font-family:inherit; color:var(--text); }
 .bl-empty { padding:26px 14px; text-align:center; color:var(--dim); font-size:11px; }
+.jline { padding:8px 10px; font-size:11px; color:var(--dim); border-bottom:1px solid var(--line); }
+.jline b { color:var(--gold); font-family:var(--mono); font-weight:600; }
+.jchip {
+  padding:1px 6px; font-size:10px; background:transparent;
+  border:1px solid var(--line2); color:var(--dim); border-radius:3px; margin-right:3px;
+}
+.jchip.on { color:var(--gold); border-color:var(--gold); }
+.jchip:hover { color:var(--text); }
 .fillbar { display:inline-block; width:42px; height:3px; background:var(--line2); border-radius:2px; overflow:hidden; margin-right:5px; vertical-align:middle; }
 .fillbar i { display:block; height:100%; background:var(--gold); transition:width .3s ease-out; }
 button.x {

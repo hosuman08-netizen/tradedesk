@@ -463,12 +463,15 @@ function showJournal() {
   document.getElementById('journal').classList.remove('hidden');
   setActiveNav('journal');
   const list = document.getElementById('journal-list');
-  list.innerHTML = renderJournalStats() + '<h3>Trade Journal</h3>';
+  let paper = '';
+  try { if (window.tfJournalHtml) paper = window.tfJournalHtml(); } catch (e) { paper = ''; }
+  list.innerHTML = paper + renderJournalStats() + '<h3>Trade Journal</h3>';
 
-  if (journal.length === 0) {
+  if (journal.length === 0 && !paper) {
     list.innerHTML += '<p>Post or accept trades to build your journal.</p>';
     return;
   }
+  if (journal.length === 0) return;
 
   const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
   journal.slice(0,8).forEach(c => {

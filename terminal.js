@@ -33,6 +33,73 @@
     replay: { on: false, idx: 0, speed: 0, timer: null }
   };
 
+  /* GOLD50 TOP4: TradeZella-style local tags + win/avgR. Paper fills only.
+     R = realized ÷ 1% notional (no stop = default). No live account, no invented marks. */
+  function loadTags() {
+    try { return JSON.parse(localStorage.getItem('tf2_jtag') || '{}'); } catch (e) { return {}; }
+  }
+  function saveTags(m) {
+    try { localStorage.setItem('tf2_jtag', JSON.stringify(m)); } catch (e) { /* quota */ }
+  }
+  global.tfTagFill = function (id, tag) {
+    var m = loadTags();
+    if (m[id] === tag) delete m[id]; else m[id] = tag;
+    saveTags(m);
+    renderBlotter();
+  };
+  function closedLegs() {
+    var fills = (M.account.fills || []).slice().reverse();
+    var pos = {};
+    var out = [];
+    fills.forEach(function (f) {
+      var p = pos[f.symbol] || { qty: 0, avg: 0 };
+      if (f.side === 'buy') {
+        var nq = p.qty + f.qty;
+        p.avg = nq ? (p.avg * p.qty + f.price * f.qty) / nq : 0;
+        p.qty = nq;
+      } else if (p.qty > 0) {
+        var q = Math.min(f.qty, p.qty);
+        var fee = f.fee * (q / (f.qty || 1));
+        var pnl = (f.price - p.avg) * q - fee;
+        var r1 = Math.abs(p.avg * q) * 0.01;
+        out.push({ fillId: f.id, symbol: f.symbol, pnl: pnl, r: r1 ? pnl / r1 : 0, t: f.t });
+        p.qty -= q;
+        if (p.qty < 1e-9) { p.qty = 0; p.avg = 0; }
+      }
+      pos[f.symbol] = p;
+    });
+    return out;
+  }
+  function journalLine() {
+    var legs = closedLegs();
+    var n = legs.length;
+    if (!n) {
+      return '<div class="jline" id="tf-jline">0 closed · tag fills 계획/충동 · R = realized ÷ 1% notional · paper only · no live account</div>';
+    }
+    var wins = 0, rSum = 0;
+    legs.forEach(function (x) { if (x.pnl > 0) wins++; rSum += x.r; });
+    var wr = (wins / n * 100).toFixed(0);
+    var ar = (rSum / n).toFixed(2);
+    return '<div class="jline" id="tf-jline"><b>' + n + '</b> closed · win <b>' + wr + '%</b> · avg R <b>' + ar + '</b>'
+      + ' · R=realized÷1% notional · paper · no live account</div>';
+  }
+  function tagCell(id, cur) {
+    return '<td class="jtag">'
+      + '<button type="button" class="jchip' + (cur === 'planned' ? ' on' : '') + '" onclick="tfTagFill(' + id + ',\'planned\')">계획</button>'
+      + '<button type="button" class="jchip' + (cur === 'impulse' ? ' on' : '') + '" onclick="tfTagFill(' + id + ',\'impulse\')">충동</button>'
+      + '</td>';
+  }
+  global.tfJournalHtml = function () {
+    var tags = loadTags();
+    var fills = (M.account.fills || []).slice(0, 12);
+    var rows = fills.map(function (f) {
+      var t = tags[f.id] || '—';
+      return '<div class="notebook-entry"><small>' + ts(f.t) + ' · ' + esc(f.symbol) + ' · ' + f.side + '</small><br>'
+        + fmt(f.price, d(f.symbol)) + ' × ' + compact(f.qty) + ' · tag ' + esc(t) + '</div>';
+    }).join('');
+    return journalLine() + (rows || '<p>No paper fills yet. Execute on the terminal — prices stay simulated.</p>');
+  };
+
   function d(sym) { return M.decimals(M.symbolById(sym)); }
   function fmt(v, n) { return M.fmt(v, n); }
 
@@ -756,9 +823,10 @@
 
     if (T.blotter === 'trades') {
       const fills = M.account.fills;
+      const tags = loadTags();
       setCount('c-trades', fills.length);
-      el.innerHTML = table(
-        ['Time', 'Market', 'Side', 'Price', 'Amount', 'Value', 'Fee', 'Role'],
+      el.innerHTML = journalLine() + table(
+        ['Time', 'Market', 'Side', 'Price', 'Amount', 'Value', 'Fee', 'Role', 'Tag'],
         fills.slice(0, 60).map(function (f) {
           const dec = d(f.symbol);
           return '<tr><td class="dim">' + ts(f.t) + '</td><td><b>' + f.symbol + '</b></td>'
@@ -766,9 +834,10 @@
             + '<td>' + fmt(f.price, dec) + '</td><td>' + compact(f.qty) + '</td>'
             + '<td>' + fmt(f.qty * f.price, 2) + '</td>'
             + '<td class="dim">' + fmt(f.fee, 4) + '</td>'
-            + '<td class="dim">' + f.liquidity + '</td></tr>';
+            + '<td class="dim">' + f.liquidity + '</td>'
+            + tagCell(f.id, tags[f.id]) + '</tr>';
         }),
-        'No executions yet. Every fill is logged here with its price, fee and maker/taker role.'
+        'No executions yet. Every fill is logged here with its price, fee and maker/taker role. Tag 계획/충동 after a fill — paper only.'
       );
       return;
     }
