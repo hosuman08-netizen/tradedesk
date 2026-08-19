@@ -740,13 +740,39 @@
   let tapePickKey = '';
   let tapeFlashUntil = 0;
   /* WAVE156: after residual glow dies, focus clock line. Existing #tp-pick-when only. */
+  /* WAVE163: focus ring 0.4s on #tp-pick-when. No invented ticks. */
+  let pickWhenRingTok = 0;
   function pickWhenId() { return 'tp-pick-when'; }
+  function pickWhenRingMs() { return 400; }
+  function clearPickWhenRing() {
+    const el = $(pickWhenId());
+    if (!el) return;
+    el.style.outline = '';
+    el.style.outlineOffset = '';
+    el.style.boxShadow = '';
+    try { el.setAttribute('data-pick-ring', '0'); } catch (e0) {}
+  }
+  function armPickWhenRing() {
+    const el = $(pickWhenId());
+    if (!el) return false;
+    el.style.outline = '2px solid #e0b552';
+    el.style.outlineOffset = '2px';
+    el.style.boxShadow = '0 0 0 4px #e0b55255';
+    try { el.setAttribute('data-pick-ring', '1'); } catch (e1) {}
+    const tok = ++pickWhenRingTok;
+    setTimeout(function () {
+      if (tok !== pickWhenRingTok) return;
+      clearPickWhenRing();
+    }, pickWhenRingMs());
+    return true;
+  }
   function focusPickWhen() {
     const el = $(pickWhenId());
     if (!el) return false;
     try { el.tabIndex = 0; } catch (e0) {}
     try { el.focus(); } catch (e1) {}
     try { el.scrollIntoView({ block: 'nearest' }); } catch (e2) {}
+    armPickWhenRing();
     return true;
   }
   global.tfPickTape = function (p, side, tMs, qty) {
