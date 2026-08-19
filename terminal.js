@@ -741,9 +741,24 @@
   let tapeFlashUntil = 0;
   global.tfPickTape = function (p, side, tMs, qty) {
     if (!(p > 0)) return;
+    const newKey = String(tMs || '') + ':' + p + ':' + (qty == null ? '' : qty) + ':' + (side === 'sell' ? 'sell' : 'buy');
+    /* WAVE147: same tape row re-tap during flash = kill residual glow now. Existing M.tape t only. */
+    const whenEl = $('tp-pick-when');
+    if (newKey === tapePickKey && (Date.now() < tapeFlashUntil || (whenEl && whenEl.classList.contains('when-flash')))) {
+      tapeFlashUntil = 0;
+      if (whenEl) {
+        try { clearTimeout(whenEl._wfT); } catch (eKill) {}
+        whenEl._wfT = null;
+        whenEl.classList.remove('when-flash');
+      }
+      const tapeEl = $('tape-list');
+      const row = tapeEl && tapeEl.querySelector('.tp-row.picked');
+      if (row) row.classList.remove('picked-flash');
+      return;
+    }
     if (side === 'buy' || side === 'sell') global.tfSetSide(side);
     global.tfPickPrice(p);
-    tapePickKey = String(tMs || '') + ':' + p + ':' + (qty == null ? '' : qty) + ':' + (side === 'sell' ? 'sell' : 'buy');
+    tapePickKey = newKey;
     renderTape();
     if (global.legionTrack) try { global.legionTrack('tape_pick_side', { s: T.symbol, side: side === 'sell' ? 'sell' : 'buy' }); } catch (e) { /* beacon optional */ }
   };
