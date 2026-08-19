@@ -738,6 +738,7 @@
   /* WAVE74: same print also syncs BUY/SELL. Side from M.tape only — no invented ticks. */
   /* WAVE78: selected tape row highlight. Key = existing print only. */
   let tapePickKey = '';
+  let tapeFlashUntil = 0;
   global.tfPickTape = function (p, side, tMs, qty) {
     if (!(p > 0)) return;
     if (side === 'buy' || side === 'sell') global.tfSetSide(side);
@@ -796,7 +797,7 @@
       const dt = new Date(t.t);
       const p = n => String(n).padStart(2, '0');
       const s = t.side === 'sell' ? 'sell' : 'buy';
-      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + (key(t) === tapePickKey ? ' picked' : '') + '" onclick="tfPickTape(' + t.price + ',\'' + s + '\',' + t.t + ',' + t.qty + ')" title="fill limit + BUY/SELL from this print">'
+      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + (key(t) === tapePickKey ? ' picked' : '') + (key(t) === tapePickKey && Date.now() < tapeFlashUntil ? ' picked-flash' : '') + '" onclick="tfPickTape(' + t.price + ',\'' + s + '\',' + t.t + ',' + t.qty + ')" title="fill limit + BUY/SELL from this print">'
         + '<span>' + (t.side === 'buy' ? '▲' : '▼') + ' ' + fmt(t.price, dec) + '</span>'
         + '<span>' + compact(t.qty) + '</span>'
         + '<span class="dim">' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + '</span>'
@@ -824,12 +825,15 @@
         whenEl.title = '';
       }
       /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
+      /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
       whenEl.onclick = function () {
         const row = el.querySelector('.tp-row.picked');
         if (!row) return;
+        tapeFlashUntil = Date.now() + 800;
+        row.classList.add('picked-flash');
         try { row.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
         catch (e) { try { row.scrollIntoView(); } catch (e2) { /* no scroll */ } }
-        if (global.legionTrack) try { global.legionTrack('tape_jump_pick', { s: T.symbol }); } catch (e3) { /* beacon optional */ }
+        if (global.legionTrack) try { global.legionTrack('tape_jump_flash', { s: T.symbol }); } catch (e3) { /* beacon optional */ }
       };
     }
   }
