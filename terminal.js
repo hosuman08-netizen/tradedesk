@@ -743,6 +743,7 @@
   /* WAVE163: focus ring 0.4s on #tp-pick-when. No invented ticks. */
   /* WAVE168: retap during ring = restart ring. Existing M.tape t only. */
   /* WAVE171: ring tap = ring off. Jump still after off. No invented ticks. */
+  /* WAVE175: after ring off, keep clock-line focus. No invented ticks. */
   let pickWhenRingTok = 0;
   function pickWhenId() { return 'tp-pick-when'; }
   function pickWhenRingMs() { return 400; }
@@ -759,6 +760,15 @@
     try { el.setAttribute('data-pick-ring', '0'); } catch (e0) {}
     try { el.setAttribute('data-re-ring', '0'); } catch (e1) {}
   }
+  function holdPickWhenFocus() {
+    const el = $(pickWhenId());
+    if (!el) return false;
+    try { el.tabIndex = 0; } catch (e0) {}
+    try { el.focus(); } catch (e1) {}
+    try { el.scrollIntoView({ block: 'nearest' }); } catch (e2) {}
+    try { el.setAttribute('data-focus-after-kill', '1'); } catch (e3) {}
+    return true;
+  }
   function killPickWhenRing() {
     pickWhenRingTok++;
     const el = $(pickWhenId());
@@ -766,6 +776,7 @@
     if (!el) return;
     try { el.setAttribute('data-ring-off', '1'); } catch (e2) {}
     try { el.setAttribute('data-ring-tap', '1'); } catch (e3) {}
+    holdPickWhenFocus();
   }
   function armPickWhenRing() {
     const el = $(pickWhenId());
@@ -778,6 +789,7 @@
     try { el.setAttribute('data-re-ring', retr ? '1' : '0'); } catch (e2) {}
     try { el.setAttribute('data-ring-off', '0'); } catch (e3) {}
     try { el.setAttribute('data-ring-tap', '1'); } catch (e4) {}
+    try { el.setAttribute('data-focus-after-kill', '0'); } catch (e5) {}
     const tok = ++pickWhenRingTok;
     setTimeout(function () {
       if (tok !== pickWhenRingTok) return;
