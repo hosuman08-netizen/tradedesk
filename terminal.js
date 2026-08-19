@@ -741,9 +741,14 @@
   let tapeFlashUntil = 0;
   /* WAVE156: after residual glow dies, focus clock line. Existing #tp-pick-when only. */
   /* WAVE163: focus ring 0.4s on #tp-pick-when. No invented ticks. */
+  /* WAVE168: retap during ring = restart ring. Existing M.tape t only. */
   let pickWhenRingTok = 0;
   function pickWhenId() { return 'tp-pick-when'; }
   function pickWhenRingMs() { return 400; }
+  function pickWhenRingIsOn() {
+    const el = $(pickWhenId());
+    return !!(el && el.getAttribute('data-pick-ring') === '1');
+  }
   function clearPickWhenRing() {
     const el = $(pickWhenId());
     if (!el) return;
@@ -751,14 +756,17 @@
     el.style.outlineOffset = '';
     el.style.boxShadow = '';
     try { el.setAttribute('data-pick-ring', '0'); } catch (e0) {}
+    try { el.setAttribute('data-re-ring', '0'); } catch (e1) {}
   }
   function armPickWhenRing() {
     const el = $(pickWhenId());
     if (!el) return false;
+    const retr = el.getAttribute('data-pick-ring') === '1';
     el.style.outline = '2px solid #e0b552';
     el.style.outlineOffset = '2px';
     el.style.boxShadow = '0 0 0 4px #e0b55255';
     try { el.setAttribute('data-pick-ring', '1'); } catch (e1) {}
+    try { el.setAttribute('data-re-ring', retr ? '1' : '0'); } catch (e2) {}
     const tok = ++pickWhenRingTok;
     setTimeout(function () {
       if (tok !== pickWhenRingTok) return;
@@ -791,6 +799,11 @@
       const row = tapeEl && tapeEl.querySelector('.tp-row.picked');
       if (row) row.classList.remove('picked-flash');
       focusPickWhen();
+      return;
+    }
+    /* WAVE168: same tape row re-tap while ring is on = restart 0.4s ring. No invented ticks. */
+    if (newKey === tapePickKey && pickWhenRingIsOn()) {
+      armPickWhenRing();
       return;
     }
     if (side === 'buy' || side === 'sell') global.tfSetSide(side);
