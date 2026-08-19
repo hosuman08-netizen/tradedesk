@@ -742,6 +742,7 @@
   /* WAVE156: after residual glow dies, focus clock line. Existing #tp-pick-when only. */
   /* WAVE163: focus ring 0.4s on #tp-pick-when. No invented ticks. */
   /* WAVE168: retap during ring = restart ring. Existing M.tape t only. */
+  /* WAVE171: ring tap = ring off. Jump still after off. No invented ticks. */
   let pickWhenRingTok = 0;
   function pickWhenId() { return 'tp-pick-when'; }
   function pickWhenRingMs() { return 400; }
@@ -758,6 +759,14 @@
     try { el.setAttribute('data-pick-ring', '0'); } catch (e0) {}
     try { el.setAttribute('data-re-ring', '0'); } catch (e1) {}
   }
+  function killPickWhenRing() {
+    pickWhenRingTok++;
+    const el = $(pickWhenId());
+    clearPickWhenRing();
+    if (!el) return;
+    try { el.setAttribute('data-ring-off', '1'); } catch (e2) {}
+    try { el.setAttribute('data-ring-tap', '1'); } catch (e3) {}
+  }
   function armPickWhenRing() {
     const el = $(pickWhenId());
     if (!el) return false;
@@ -767,6 +776,8 @@
     el.style.boxShadow = '0 0 0 4px #e0b55255';
     try { el.setAttribute('data-pick-ring', '1'); } catch (e1) {}
     try { el.setAttribute('data-re-ring', retr ? '1' : '0'); } catch (e2) {}
+    try { el.setAttribute('data-ring-off', '0'); } catch (e3) {}
+    try { el.setAttribute('data-ring-tap', '1'); } catch (e4) {}
     const tok = ++pickWhenRingTok;
     setTimeout(function () {
       if (tok !== pickWhenRingTok) return;
@@ -903,7 +914,12 @@
       /* WAVE102: clock tap jumps to picked tape row. Existing .picked only. */
       /* WAVE112: after jump flash picked row. Existing tape only — no invented ticks. */
       /* WAVE133: re-tap during flash = kill residual glow now. No invented ticks. */
+      /* WAVE171: ring tap = ring off. Jump still after off. No invented ticks. */
       whenEl.onclick = function () {
+        if (pickWhenRingIsOn()) {
+          killPickWhenRing();
+          return;
+        }
         const row = el.querySelector('.tp-row.picked');
         if (!row) return;
         if (Date.now() < tapeFlashUntil || whenEl.classList.contains('when-flash')) {
