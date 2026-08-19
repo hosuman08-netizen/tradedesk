@@ -89,8 +89,33 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .flash-down { animation:flashDown .55s ease-out; }
 
 /* ── terminal layout ── */
-.term { display:grid; grid-template-columns:236px minmax(0,1fr) 272px; gap:var(--grid); align-items:start; }
+.term {
+  display:grid;
+  grid-template-columns: var(--ws-left, 236px) minmax(0,1fr) var(--ws-right, 272px);
+  gap:var(--grid); align-items:start;
+}
 .col-left, .col-mid, .col-right { min-width:0; }
+
+/* GOLD50 TOP3: workspace focus + remembered book width. Sim layout only. */
+.ws-bar {
+  grid-column: 1 / -1; display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  padding:2px 0 4px; font-size:11px; color:var(--dim);
+}
+.ws-lbl { letter-spacing:0.3px; color:var(--gold); font-weight:600; }
+.ws-bar button {
+  padding:3px 9px; font-size:10px; border-radius:4px;
+  background:transparent; border:1px solid transparent; color:var(--dim);
+}
+.ws-bar button.on { background:#241d15; color:var(--gold); border-color:var(--line2); }
+.ws-w { display:inline-flex; align-items:center; gap:6px; margin-left:auto; font-size:10px; }
+.ws-w input { width:88px; accent-color:var(--gold); height:4px; }
+.term.ws-chart { grid-template-columns: minmax(0,1fr); }
+.term.ws-chart .col-left, .term.ws-chart .col-right { display:none; }
+.term.ws-book { grid-template-columns: minmax(0,.55fr) var(--ws-right, 360px); }
+.term.ws-book .col-left { display:none; }
+.term.ws-ticket { grid-template-columns: minmax(0,1fr); }
+.term.ws-ticket .col-left, .term.ws-ticket .col-right { display:none; }
+.term.ws-ticket .chartpanel { display:none; }
 
 /* markets */
 .mk-list { max-height:380px; overflow-y:auto; }
@@ -310,14 +335,14 @@ button.x:hover { color:var(--down); border-color:var(--down); }
 
 /* ── responsive ── */
 @media (max-width:1120px) {
-  .term { grid-template-columns:minmax(0,1fr) 264px; }
-  .col-left { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:var(--grid); }
+  .term:not(.ws-chart):not(.ws-book):not(.ws-ticket) { grid-template-columns:minmax(0,1fr) var(--ws-right, 264px); }
+  .term:not(.ws-chart):not(.ws-book):not(.ws-ticket) .col-left { grid-column:1 / -1; display:grid; grid-template-columns:1fr 1fr; gap:var(--grid); }
   .col-left .panel + .panel { margin-top:0; }
   .mk-list { max-height:224px; }
 }
 @media (max-width:820px) {
-  .term { grid-template-columns:minmax(0,1fr); }
-  .col-left { grid-template-columns:1fr; }
+  .term:not(.ws-chart):not(.ws-book):not(.ws-ticket) { grid-template-columns:minmax(0,1fr); }
+  .term:not(.ws-chart):not(.ws-book):not(.ws-ticket) .col-left { grid-template-columns:1fr; }
   .chart { height:260px; }
   .tk-stats { margin-left:0; width:100%; justify-content:space-between; }
   .tk-price { font-size:22px; }

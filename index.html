@@ -52,6 +52,14 @@
     <!-- ══════════════════ TERMINAL ══════════════════ -->
     <div id="terminal" class="section hidden">
       <div class="term">
+        <div class="ws-bar" id="ws-bar" role="group" aria-label="Workspace layout">
+          <span class="ws-lbl">Workspace</span>
+          <button type="button" data-ws="split" class="on" onclick="tfWs('split')">Split</button>
+          <button type="button" data-ws="chart" onclick="tfWs('chart')">Chart</button>
+          <button type="button" data-ws="book" onclick="tfWs('book')">Book</button>
+          <button type="button" data-ws="ticket" onclick="tfWs('ticket')">Ticket</button>
+          <label class="ws-w">book width <input id="ws-right" type="range" min="200" max="420" value="272" step="4" oninput="tfWsWidth(this.value)" aria-label="Order book column width"></label>
+        </div>
 
         <!-- LEFT: markets + portfolio -->
         <aside class="col-left">

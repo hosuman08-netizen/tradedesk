@@ -287,6 +287,33 @@
     renderChart(true);
   };
 
+  /* GOLD50 TOP3: chart|book|ticket widths remembered. Layout only — no new prices. */
+  function applyWs() {
+    const term = document.querySelector('.term');
+    if (!term) return;
+    const mode = localStorage.getItem('tf2_ws_mode') || 'split';
+    const right = Math.max(200, Math.min(420, +(localStorage.getItem('tf2_ws_right') || 272)));
+    term.classList.remove('ws-split', 'ws-chart', 'ws-book', 'ws-ticket');
+    term.classList.add('ws-' + (mode === 'chart' || mode === 'book' || mode === 'ticket' ? mode : 'split'));
+    term.style.setProperty('--ws-right', right + 'px');
+    Array.prototype.forEach.call(document.querySelectorAll('[data-ws]'), function (b) {
+      b.classList.toggle('on', b.getAttribute('data-ws') === mode);
+    });
+    const rng = $('ws-right');
+    if (rng) rng.value = String(right);
+  }
+  global.tfWs = function (mode) {
+    const m = mode === 'chart' || mode === 'book' || mode === 'ticket' ? mode : 'split';
+    try { localStorage.setItem('tf2_ws_mode', m); } catch (e) { /* quota */ }
+    applyWs();
+    if (global.tfRelayout) global.tfRelayout();
+  };
+  global.tfWsWidth = function (v) {
+    try { localStorage.setItem('tf2_ws_right', String(v)); } catch (e) { /* quota */ }
+    applyWs();
+    if (global.tfRelayout) global.tfRelayout();
+  };
+
   // ── technical indicators ─────────────────────────────────────────────────
   // Config is pure UI state; the chart computes every series deterministically
   // from the same OHLCV bars it draws, so displayed values match the candles.
@@ -895,6 +922,7 @@
     global.tfSetSide('buy');
     global.tfSetGroup(1);
     loadInd();
+    applyWs();
     applyIndicators();
     syncIndMenu();
     renderMarkets(true);
