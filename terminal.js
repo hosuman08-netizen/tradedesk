@@ -735,10 +735,12 @@
   };
 
   /* WAVE69: tape row → fill limit from that print. Existing M.tape price only. */
-  global.tfPickTape = function (p) {
+  /* WAVE74: same print also syncs BUY/SELL. Side from M.tape only — no invented ticks. */
+  global.tfPickTape = function (p, side) {
     if (!(p > 0)) return;
+    if (side === 'buy' || side === 'sell') global.tfSetSide(side);
     global.tfPickPrice(p);
-    if (global.legionTrack) try { global.legionTrack('tape_pick_limit', { s: T.symbol }); } catch (e) { /* beacon optional */ }
+    if (global.legionTrack) try { global.legionTrack('tape_pick_side', { s: T.symbol, side: side === 'sell' ? 'sell' : 'buy' }); } catch (e) { /* beacon optional */ }
   };
 
   // ──────────────────────────────── trade tape ────────────────────────────────
@@ -764,7 +766,7 @@
     el.innerHTML = rows.map(function (t, i) {
       const dt = new Date(t.t);
       const p = n => String(n).padStart(2, '0');
-      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + '" onclick="tfPickTape(' + t.price + ')" title="fill limit from this print">'
+      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + '" onclick="tfPickTape(' + t.price + ',\'' + (t.side === 'sell' ? 'sell' : 'buy') + '\')" title="fill limit + BUY/SELL from this print">'
         + '<span>' + (t.side === 'buy' ? '▲' : '▼') + ' ' + fmt(t.price, dec) + '</span>'
         + '<span>' + compact(t.qty) + '</span>'
         + '<span class="dim">' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + '</span>'
