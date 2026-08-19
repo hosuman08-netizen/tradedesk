@@ -29,7 +29,8 @@
     priceTouched: false,   // has the user typed their own limit price?
     lastPrices: {},
     seenFills: 0,
-    ind: { ema7: true, ema25: true, ema99: false, ma25: false, boll: false, vwap: false, osc: 'none' }
+    ind: { ema7: true, ema25: true, ema99: false, ma25: false, boll: false, vwap: false, osc: 'none' },
+    replay: { on: false, idx: 0, speed: 0, timer: null }
   };
 
   function d(sym) { return M.decimals(M.symbolById(sym)); }
@@ -161,6 +162,7 @@
     T.symbol = sym;
     T.priceTouched = false;
     localStorage.setItem('tf2_symbol', sym);
+    tfReplayLive();
     renderMarkets(true);
     renderTicker();
     syncOrderForm(true);
@@ -191,17 +193,94 @@
     return lines;
   }
 
+  function candleSeries() {
+    return M.candles(T.symbol, T.tf, 400);
+  }
+
+  function replaySlice() {
+    const all = candleSeries();
+    if (!T.replay.on) return all;
+    const n = Math.max(24, Math.min(all.length, T.replay.idx || all.length));
+    return all.slice(0, n);
+  }
+
+  function stopReplayTimer() {
+    if (T.replay.timer) { clearInterval(T.replay.timer); T.replay.timer = null; }
+  }
+
+  function replayStamp() {
+    if (!T.replay.on) return 'live sim';
+    const bars = replaySlice();
+    const b = bars[bars.length - 1];
+    if (!b) return 'replay';
+    const dt = new Date(b.t);
+    return dt.toISOString().replace('T', ' ').slice(0, 16) + ' UTC';
+  }
+
+  function syncReplayUi() {
+    const all = candleSeries();
+    const scrub = $('rp-scrub');
+    if (scrub) {
+      scrub.max = String(Math.max(24, all.length));
+      const idx = T.replay.on ? Math.max(24, Math.min(all.length, T.replay.idx || all.length)) : all.length;
+      if (document.activeElement !== scrub) scrub.value = String(idx);
+    }
+    const live = $('rp-live'), x1 = $('rp-1x'), x4 = $('rp-4x'), st = $('rp-stamp');
+    if (live) live.classList.toggle('on', !T.replay.on);
+    if (x1) x1.classList.toggle('on', T.replay.on && T.replay.speed === 1);
+    if (x4) x4.classList.toggle('on', T.replay.on && T.replay.speed === 4);
+    if (st) st.textContent = replayStamp();
+  }
+
   function renderChart(reset) {
     if (!T.chart) return;
     if (reset) T.chart.offset = 0;
-    T.chart.setData(M.candles(T.symbol, T.tf, 400), {
-      decimals: d(T.symbol), tf: T.tf, lines: chartLines()
+    T.chart.setData(replaySlice(), {
+      decimals: d(T.symbol), tf: T.tf, lines: T.replay.on ? [] : chartLines()
     });
+    syncReplayUi();
   }
+
+  global.tfReplayLive = function () {
+    stopReplayTimer();
+    T.replay.on = false;
+    T.replay.speed = 0;
+    T.replay.idx = 0;
+    renderChart(true);
+  };
+
+  global.tfReplayScrub = function (v) {
+    const all = candleSeries();
+    stopReplayTimer();
+    T.replay.on = true;
+    T.replay.speed = 0;
+    T.replay.idx = Math.max(24, Math.min(all.length, Number(v) || all.length));
+    renderChart(false);
+  };
+
+  global.tfReplaySpeed = function (spd) {
+    const all = candleSeries();
+    stopReplayTimer();
+    T.replay.on = true;
+    T.replay.speed = spd === 4 ? 4 : 1;
+    if (!T.replay.idx || T.replay.idx >= all.length) T.replay.idx = 24;
+    const step = function () {
+      const series = candleSeries();
+      T.replay.idx = (T.replay.idx || 24) + 1;
+      if (T.replay.idx >= series.length) {
+        tfReplayLive();
+        return;
+      }
+      renderChart(false);
+    };
+    T.replay.timer = setInterval(step, T.replay.speed === 4 ? 100 : 400);
+    renderChart(false);
+  };
 
   global.tfSetTf = function (tf) {
     T.tf = tf;
     localStorage.setItem('tf2_tf', tf);
+    tfReplayLive();
     Array.prototype.forEach.call(document.querySelectorAll('#tf-bar button'), function (b) {
       b.classList.toggle('on', b.dataset.tf === tf);
     });
@@ -299,7 +378,7 @@
   }
 
   function ohlcDefault() {
-    const bars = M.candles(T.symbol, T.tf, 2);
+    const bars = replaySlice();
     const b = bars[bars.length - 1];
     if (!b) return '';
     const dec = d(T.symbol);
@@ -774,7 +853,7 @@
       renderBook();
       renderTape();
       renderPortfolio();
-      renderChart(false);
+      if (!T.replay.on) renderChart(false);
       if (tickCount % 3 === 0) renderMarkets(false);
       if (tickCount % 5 === 0 && T.blotter === 'positions') renderBlotter();
       if (tickCount % 30 === 0) renderNews();

@@ -138,6 +138,21 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .ohlc { font-family:var(--mono); font-size:10px; color:var(--dim); letter-spacing:0.2px; margin-left:auto; }
 .chartpanel { position:relative; }
 
+/* GOLD50 TOP2: bar replay — existing candles only, no live ticker rewrite */
+.replay-bar {
+  display:flex; align-items:center; gap:6px; padding:6px 8px;
+  border-top:1px solid var(--line); flex-wrap:wrap;
+}
+.replay-bar button {
+  padding:3px 8px; font-size:10px; border-radius:4px;
+  background:transparent; border:1px solid transparent; color:var(--dim);
+}
+.replay-bar button.on { background:#241d15; color:var(--gold); border-color:var(--line2); }
+.replay-bar input[type="range"] {
+  flex:1; min-width:120px; accent-color:var(--gold); height:4px;
+}
+.rp-stamp { font-family:var(--mono); font-size:10px; color:var(--dim); white-space:nowrap; }
+
 /* indicators control */
 .ind-btn { display:inline-flex; align-items:center; gap:4px; padding:3px 8px; font-size:10px; border-radius:4px;
   background:transparent; border:1px solid transparent; color:var(--dim); }

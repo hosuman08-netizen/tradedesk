@@ -113,7 +113,14 @@
               <label class="ind-opt"><input type="radio" name="tf-osc" data-osc="macd" onchange="tfSetOsc('macd')">MACD 12, 26, 9</label>
             </div>
             <canvas id="chart-canvas" class="chart"></canvas>
-            <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders. Indicators are computed from the same bars.</div>
+            <div id="replay-bar" class="replay-bar">
+              <button type="button" id="rp-live" class="on" onclick="tfReplayLive()">Live</button>
+              <button type="button" id="rp-1x" onclick="tfReplaySpeed(1)">1×</button>
+              <button type="button" id="rp-4x" onclick="tfReplaySpeed(4)">4×</button>
+              <input id="rp-scrub" type="range" min="24" max="400" value="400" step="1" oninput="tfReplayScrub(this.value)" aria-label="Bar replay scrub">
+              <span id="rp-stamp" class="rp-stamp">live sim</span>
+            </div>
+            <div class="chart-f">Scroll to zoom · drag to pan · hover for OHLC. Gold dashes = your average entry, green/red dashes = your resting orders. Indicators are computed from the same bars. Replay scrubs existing bars only — no new price source.</div>
           </div>
 
           <div id="order-form" class="panel ticket buy">
@@ -298,5 +305,6 @@
   <script src="script.js"></script>
 <script>window.LEGION_APP='tradedesk';window.LEGION_ANALYTICS_URL='https://legion-analytics.hoyashi95.workers.dev';</script>
 <script src="legion-beacon.js"></script>
+  <script src="lung-surprise-eye.js"></script>
 </body>
 </html>
