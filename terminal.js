@@ -715,6 +715,25 @@
     if (global.legionTrack) try { global.legionTrack('ob_copy_top', { s: T.symbol }); } catch (e) { /* beacon optional */ }
   };
 
+  /* WAVE63: copy last tape print. Existing M.tape only — no invented ticks. */
+  global.tfCopyTape = function () {
+    const last = M.tape(T.symbol, 1)[0];
+    if (!last) { toast('No tape.', 'warn'); return; }
+    const dec = d(T.symbol);
+    const dt = new Date(last.t);
+    const p = n => String(n).padStart(2, '0');
+    const hh = p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds());
+    const txt = T.symbol + ' last ' + (last.side === 'buy' ? 'BUY' : 'SELL')
+      + ' ' + fmt(last.price, dec) + ' × ' + compact(last.qty)
+      + ' @ ' + hh + ' · paper sim · not a live quote';
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(function () { toast('Last print copied.', 'ok'); }, function () { toast(txt, 'ok'); });
+    } else {
+      toast(txt, 'ok');
+    }
+    if (global.legionTrack) try { global.legionTrack('tape_copy_last', { s: T.symbol }); } catch (e) { /* beacon optional */ }
+  };
+
   // ──────────────────────────────── trade tape ────────────────────────────────
 
   let lastTapeKey = '';
