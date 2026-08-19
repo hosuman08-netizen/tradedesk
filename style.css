@@ -294,8 +294,10 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
 .tape { max-height:236px; overflow-y:auto; }
 .tp-row {
   display:grid; grid-template-columns:1fr 1fr 1fr; gap:4px;
-  padding:2px 9px; font-family:var(--mono); font-size:10.5px;
+  padding:2px 9px; font-family:var(--mono); font-size:10.5px; cursor:pointer;
+  transition:background .12s ease-out;
 }
+.tp-row:hover { background:#1a1510; }
 /* only prints that just arrived animate in — animating the whole list reads as flicker */
 .tp-row.fresh { animation:tapeIn .3s ease-out; }
 .tp-row span:nth-child(n+2) { text-align:right; }

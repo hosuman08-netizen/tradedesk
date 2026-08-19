@@ -734,6 +734,13 @@
     if (global.legionTrack) try { global.legionTrack('tape_copy_last', { s: T.symbol }); } catch (e) { /* beacon optional */ }
   };
 
+  /* WAVE69: tape row → fill limit from that print. Existing M.tape price only. */
+  global.tfPickTape = function (p) {
+    if (!(p > 0)) return;
+    global.tfPickPrice(p);
+    if (global.legionTrack) try { global.legionTrack('tape_pick_limit', { s: T.symbol }); } catch (e) { /* beacon optional */ }
+  };
+
   // ──────────────────────────────── trade tape ────────────────────────────────
 
   let lastTapeKey = '';
@@ -757,7 +764,7 @@
     el.innerHTML = rows.map(function (t, i) {
       const dt = new Date(t.t);
       const p = n => String(n).padStart(2, '0');
-      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + '">'
+      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + '" onclick="tfPickTape(' + t.price + ')" title="fill limit from this print">'
         + '<span>' + (t.side === 'buy' ? '▲' : '▼') + ' ' + fmt(t.price, dec) + '</span>'
         + '<span>' + compact(t.qty) + '</span>'
         + '<span class="dim">' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + '</span>'
