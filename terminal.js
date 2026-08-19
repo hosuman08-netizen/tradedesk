@@ -625,8 +625,19 @@
 
   // ───────────────────────────── order book + depth ───────────────────────────
 
+  /* WAVE50: remember book grouping. init used to reset 1× every load. */
+  function loadGroup() {
+    try {
+      var g = Number(localStorage.getItem('tf2_group'));
+      if (g === 1 || g === 5 || g === 20) return g;
+    } catch (e) { /* quota */ }
+    return 1;
+  }
   global.tfSetGroup = function (g) {
+    g = Number(g);
+    if (g !== 1 && g !== 5 && g !== 20) g = 1;
     T.group = g;
+    try { localStorage.setItem('tf2_group', String(g)); } catch (e) { /* quota */ }
     Array.prototype.forEach.call(document.querySelectorAll('#ob-group button'), function (b) {
       b.classList.toggle('on', Number(b.dataset.g) === g);
     });
@@ -1131,7 +1142,7 @@
 
     global.tfSetType(T.type);
     global.tfSetSide('buy');
-    global.tfSetGroup(1);
+    global.tfSetGroup(loadGroup());
     loadInd();
     applyWs();
     applyIndicators();
