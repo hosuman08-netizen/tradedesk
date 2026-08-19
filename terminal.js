@@ -238,6 +238,7 @@
     renderTape();
     renderNews();
     renderBlotter();
+    if (coach.step === 1) coachSet(2);
   };
 
   // ──────────────────────────────── chart ─────────────────────────────────────
@@ -352,6 +353,79 @@
       b.classList.toggle('on', b.dataset.tf === tf);
     });
     renderChart(true);
+  };
+
+  /* GOLD50 TOP5: first-order 3-step coach. Paper only — no live prices, no brokerage. */
+  var coach = { step: 0 };
+  function coachDone() {
+    try { return localStorage.getItem('tf2_coach') === '1'; } catch (e) { return true; }
+  }
+  function persistCoachDone() {
+    try { localStorage.setItem('tf2_coach', '1'); } catch (e) { /* quota */ }
+  }
+  function clearCoachHl() {
+    Array.prototype.forEach.call(document.querySelectorAll('.coach-hl'), function (n) {
+      n.classList.remove('coach-hl');
+    });
+  }
+  function paintCoach() {
+    var el = $('tf-coach');
+    if (!el) return;
+    clearCoachHl();
+    if (!coach.step) {
+      el.classList.add('hidden');
+      return;
+    }
+    el.classList.remove('hidden');
+    var titles = ['', '1/3 심볼 고르기', '2/3 25% 슬라이더', '3/3 지정가 확인'];
+    var bodies = [
+      '',
+      '왼쪽 Markets에서 심볼 하나를 누르세요. 시세는 시뮬 · 중개 없음.',
+      '25% 버튼을 누르거나 슬라이더를 25로. 사이징만 · 아직 주문 안 나감.',
+      'Order type = Limit · 지정가를 확인하세요. 제출은 선택. 페이퍼만.'
+    ];
+    var h = el.querySelector('.coach-h');
+    var b = el.querySelector('.coach-b');
+    if (h) h.textContent = titles[coach.step] || '';
+    if (b) b.textContent = bodies[coach.step] || '';
+    var mk = document.querySelector('#mk-list');
+    var sl = $('of-slider');
+    var ticket = $('order-form');
+    var price = $('of-price');
+    if (coach.step === 1 && mk) mk.classList.add('coach-hl');
+    if (coach.step === 2) {
+      if (sl) sl.classList.add('coach-hl');
+      Array.prototype.forEach.call(document.querySelectorAll('.of-pcts button'), function (btn) {
+        if ((btn.textContent || '').indexOf('25') === 0) btn.classList.add('coach-hl');
+      });
+    }
+    if (coach.step === 3) {
+      if (ticket) ticket.classList.add('coach-hl');
+      if (price) price.classList.add('coach-hl');
+      if (T.type !== 'limit' && global.tfSetType) global.tfSetType('limit');
+    }
+  }
+  function coachSet(n) {
+    coach.step = n;
+    paintCoach();
+  }
+  global.tfCoachSkip = function () {
+    persistCoachDone();
+    coachSet(0);
+  };
+  global.tfCoachNext = function () {
+    if (coach.step === 1) { coachSet(2); return; }
+    if (coach.step === 2) {
+      var sl = $('of-slider');
+      if (!sl || Number(sl.value) < 20) global.tfSetPct(25);
+      coachSet(3);
+      return;
+    }
+    persistCoachDone();
+    coachSet(0);
+  };
+  global.tfCoachStart = function () {
+    coachSet(1);
   };
 
   /* GOLD50 TOP3: chart|book|ticket widths remembered. Layout only — no new prices. */
@@ -660,6 +734,7 @@
     const sl = $('of-slider');
     if (sl) sl.value = String(pct);
     syncOrderForm();
+    if (coach.step === 2 && Number(pct) >= 20 && Number(pct) <= 35) coachSet(3);
   };
 
   global.tfSlider = function (v) {
@@ -998,6 +1073,7 @@
     renderNews();
     syncOrderForm(true);
     renderAll();
+    if (!coachDone()) coachSet(1);
 
     global.addEventListener('resize', function () {
       renderChart(false);
