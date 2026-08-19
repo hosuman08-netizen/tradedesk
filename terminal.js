@@ -736,10 +736,14 @@
 
   /* WAVE69: tape row → fill limit from that print. Existing M.tape price only. */
   /* WAVE74: same print also syncs BUY/SELL. Side from M.tape only — no invented ticks. */
-  global.tfPickTape = function (p, side) {
+  /* WAVE78: selected tape row highlight. Key = existing print only. */
+  let tapePickKey = '';
+  global.tfPickTape = function (p, side, tMs, qty) {
     if (!(p > 0)) return;
     if (side === 'buy' || side === 'sell') global.tfSetSide(side);
     global.tfPickPrice(p);
+    tapePickKey = String(tMs || '') + ':' + p + ':' + (qty == null ? '' : qty) + ':' + (side === 'sell' ? 'sell' : 'buy');
+    renderTape();
     if (global.legionTrack) try { global.legionTrack('tape_pick_side', { s: T.symbol, side: side === 'sell' ? 'sell' : 'buy' }); } catch (e) { /* beacon optional */ }
   };
 
@@ -766,7 +770,8 @@
     el.innerHTML = rows.map(function (t, i) {
       const dt = new Date(t.t);
       const p = n => String(n).padStart(2, '0');
-      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + '" onclick="tfPickTape(' + t.price + ',\'' + (t.side === 'sell' ? 'sell' : 'buy') + '\')" title="fill limit + BUY/SELL from this print">'
+      const s = t.side === 'sell' ? 'sell' : 'buy';
+      return '<div class="tp-row ' + (t.side === 'buy' ? 'up' : 'down') + (i < fresh ? ' fresh' : '') + (key(t) === tapePickKey ? ' picked' : '') + '" onclick="tfPickTape(' + t.price + ',\'' + s + '\',' + t.t + ',' + t.qty + ')" title="fill limit + BUY/SELL from this print">'
         + '<span>' + (t.side === 'buy' ? '▲' : '▼') + ' ' + fmt(t.price, dec) + '</span>'
         + '<span>' + compact(t.qty) + '</span>'
         + '<span class="dim">' + p(dt.getHours()) + ':' + p(dt.getMinutes()) + ':' + p(dt.getSeconds()) + '</span>'

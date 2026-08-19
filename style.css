@@ -298,6 +298,8 @@ button.primary { background:var(--gold); color:#0a0806; font-weight:600; }
   transition:background .12s ease-out;
 }
 .tp-row:hover { background:#1a1510; }
+/* WAVE78: selected print — existing tape row only, no invented ticks */
+.tp-row.picked { background:#2a2310; box-shadow:inset 2px 0 0 var(--gold); }
 /* only prints that just arrived animate in — animating the whole list reads as flicker */
 .tp-row.fresh { animation:tapeIn .3s ease-out; }
 .tp-row span:nth-child(n+2) { text-align:right; }
